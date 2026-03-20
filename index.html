@@ -1162,6 +1162,18 @@
         <!-- PANTALLA CONFIG -->
         <div id="config" class="content-section">
             <div class="category-breakdown">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--primary);">⚙️ Configuración de Backend</div>
+               
+                <div class="form-group">
+                    <label class="form-label">URL de Google Apps Script</label>
+                    <input type="text" class="form-input" id="apiURL" placeholder="https://script.google.com/macros/s/.../usercoderun" style="font-size: 12px;">
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">Pega aquí la URL de tu Apps Script. Se guardará en el navegador.</div>
+                </div>
+
+                <button class="button button-primary" style="width: 100%; margin-bottom: 12px;" id="guardarAPIBtn">💾 Guardar URL</button>
+            </div>
+
+            <div class="category-breakdown">
                 <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Cotización USD (Blue)</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
                     <div style="font-size: 13px; color: var(--text-secondary);">Valor Actual</div>
@@ -1250,6 +1262,50 @@
     let currentCurrency = 'ARS';
     let tipoMovimientoActual = 'gasto';
     let monedaAgregar = 'ARS';
+    let API_URL = localStorage.getItem('apiURL') || '';
+
+    function updateDate() {
+        const today = new Date();
+        const options = { day: 'numeric', month: 'short' };
+        document.getElementById('currentDate').textContent = today.toLocaleDateString('es-AR', options);
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast success';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // Cargar URL de API guardada
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedURL = localStorage.getItem('apiURL');
+        if (savedURL) {
+            document.getElementById('apiURL').value = savedURL;
+            API_URL = savedURL;
+        }
+    });
+
+    // Guardar URL de API
+    document.getElementById('guardarAPIBtn').addEventListener('click', () => {
+        const url = document.getElementById('apiURL').value.trim();
+        if (!url) {
+            showToast('Ingresa una URL válida');
+            return;
+        }
+        localStorage.setItem('apiURL', url);
+        API_URL = url;
+        showToast('✓ URL guardada correctamente');
+    });
 
     function updateDate() {
         const today = new Date();
