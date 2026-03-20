@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gastos">
+    <meta name="theme-color" content="#1a1a2e">
+
+```
+<title>Gastos App v2.2</title>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    :root {
+        --primary: #00d4ff;
+        --primary-dark: #0099cc;
+        --secondary: #ffd700;
+        --bg-dark: #1a1a2e;
+        --bg-darker: #0f0f1e;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0a0;
+        --success: #00d978;
+        --danger: #ff4444;
+        --warning: #ffaa00;
+        --card-bg: #2a2a3e;
+        --border-color: #3a3a4e;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-primary);
+        overflow: hidden;
+        height: 100vh;
+        width: 100%;
+    }
+
+    html, body {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+    }
+
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+        background-color: var(--bg-dark);
+    }
+
+    .header {
+        background: linear-gradient(135deg, var(--bg-darker), var(--bg-dark));
+        padding: 16px 16px 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        z-index: 100;
+    }
+
+    .header-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .header-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    .currency-toggle {
+        display: flex;
+        gap: 8px;
+        background-color: var(--card-bg);
+        border-radius: 20px;
+        padding: 4px;
+    }
+
+    .currency-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .currency-toggle button.active {
+        background-color: var(--primary);
+        color: var(--bg-dark);
+    }
+
+    .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        padding-bottom: calc(60px + 20px);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .content-section {
+        display: none;
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
+    .content-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .balance-card {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+        color: var(--bg-dark);
+        box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+        transition: transform 0.3s ease;
+    }
+
+    .balance-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .balance-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.8;
+        letter-spacing: 1px;
+    }
+
+    .balance-amount {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 8px 0;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 2px;
+    }
+
+    .balance-currency {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5));
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+    }
+
+    .stat-card.gastos .stat-value {
+        color: var(--danger);
+    }
+
+    .quick-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .quick-btn {
+        padding: 14px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.05));
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .quick-btn.gasto {
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .quick-btn.gasto:active {
+        background-color: var(--danger);
+        color: white;
+        transform: scale(0.98);
+    }
+
+    .quick-btn.ingreso {
+        border-color: var(--success);
+        color: var(--success);
+    }
+
+    .quick-btn.ingreso:active {
+        background-color: var(--success);
+        color: var(--bg-dark);
+        transform: scale(0.98);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        letter-spacing: 0.5px;
+    }
+
+    .form-input,
+    .form-select {
+        width: 100%;
+        padding: 12px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 16px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+
+    .monto-input {
+        font-family: 'Courier New', monospace !important;
+        font-size: 24px !important;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+
+    .modal-currency-btn {
+        flex: 1;
+        padding: 10px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .modal-currency-btn.active {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        color: var(--bg-dark);
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5));
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .summary-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .summary-card-title {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .summary-card-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+    }
+
+    .summary-card-change {
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .summary-card-change.positive {
+        color: var(--success);
+    }
+
+    .summary-card-change.negative {
+        color: var(--danger);
+    }
+
+    .category-breakdown {
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5));
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .comparison-row {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-color);
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .comparison-row:last-child {
+        border-bottom: none;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .comparison-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .comparison-label {
+        font-weight: 600;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .category-icon {
+        font-size: 18px;
+    }
+
+    .comparison-percent {
+        font-weight: 700;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .comparison-percent.up {
+        background-color: rgba(255, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .comparison-percent.down {
+        background-color: rgba(0, 217, 120, 0.2);
+        color: var(--success);
+    }
+
+    .category-bar {
+        height: 6px;
+        background-color: var(--border-color);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .category-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        background: linear-gradient(180deg, var(--bg-darker), var(--bg-dark));
+        border-top: 1px solid var(--border-color);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        padding-bottom: 10px;
+        height: 60px;
+    }
+
+    .nav-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex: 1;
+        padding: 12px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .nav-button.active {
+        color: var(--primary);
+    }
+
+    .nav-button .icon {
+        font-size: 24px;
+        transition: transform 0.3s ease;
+    }
+
+    .nav-button.active .icon {
+        transform: scale(1.2);
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 300;
+        justify-content: center;
+        align-items: flex-end;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .modal-content {
+        background-color: var(--bg-dark);
+        border-radius: 20px 20px 0 0;
+        padding: 24px 16px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+        z-index: 1;
+    }
+
+    .modal-header {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 28px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:active {
+        transform: scale(0.9);
+    }
+
+    .button {
+        flex: 1;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .button-primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: var(--bg-dark);
+        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+    }
+
+    .button-primary:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(0, 212, 255, 0.1);
+    }
+
+    .button-secondary {
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5));
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .button-secondary:active {
+        background-color: var(--border-color);
+        transform: scale(0.98);
+    }
+
+    .button-danger {
+        background: linear-gradient(135deg, var(--danger), #cc3333);
+        color: white;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 90px;
+        left: 16px;
+        right: 16px;
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.8));
+        color: var(--text-primary);
+        padding: 12px 16px;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+        z-index: 250;
+        animation: slideUp 0.3s ease-out;
+        backdrop-filter: blur(10px);
+    }
+
+    .toast.success {
+        border-left-color: var(--success);
+    }
+
+    .toast.error {
+        border-left-color: var(--danger);
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .month-selector {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    .month-selector select {
+        flex: 1;
+        padding: 10px;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .month-selector select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .detail-item {
+        background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5));
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .detail-left {
+        flex: 1;
+    }
+
+    .detail-date {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .detail-category {
+        font-weight: 600;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .detail-amount {
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        text-align: right;
+    }
+
+    .detail-amount.gasto {
+        color: var(--danger);
+    }
+
+    .detail-amount.ingreso {
+        color: var(--success);
+    }
+
+    .undo-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .undo-btn:active {
+        color: var(--danger);
+        transform: scale(1.2);
+    }
+
+    .action-icon-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 6px 4px;
+        transition: all 0.2s ease;
+    }
+
+    .action-icon-btn:first-of-type:active {
+        color: var(--primary);
+        transform: scale(1.1);
+    }
+
+    .action-icon-btn:last-of-type:active {
+        color: var(--danger);
+        transform: scale(1.1);
+    }
+
+    .badge {
+        display: inline-block;
+        background: linear-gradient(135deg, var(--danger), #cc3333);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 8px;
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="header-title">💰 Gastos</div>
+            <div class="header-info">
+                <span id="currentDate">19 Mar</span>
+                <div class="currency-toggle">
+                    <button class="active" data-currency="ARS">ARS</button>
+                    <button data-currency="USD">USD</button>
+                </div>
+            </div>
+        </div>
+
+```
+    <div class="content">
+        <!-- PANTALLA INICIO DE MES -->
+        <div id="inicioMes" class="content-section">
+            <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; padding: 20px; margin-bottom: 24px; color: var(--bg-dark);">
+                <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; opacity: 0.8; letter-spacing: 1px;">Iniciar Nuevo Mes</div>
+                <div style="font-size: 24px; font-weight: 700; margin-top: 8px;">Marzo 2026</div>
+                <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">Ingresa tus saldos iniciales</div>
+            </div>
+
+            <!-- ARS -->
+            <div class="category-breakdown">
+                <div style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--danger);">💵 Pesos (ARS)</div>
+               
+                <div class="form-group">
+                    <label class="form-label">Banco Ciudad</label>
+                    <input type="text" class="form-input" id="bancoCiudad" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Banco Galicia</label>
+                    <input type="text" class="form-input" id="bancoGalicia" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Efectivo</label>
+                    <input type="text" class="form-input" id="efectivoARS" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Plazo Fijo</label>
+                    <input type="text" class="form-input" id="plazoFijo" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="comparison-row" style="border-top: 2px solid var(--border-color); padding-top: 12px;">
+                    <div class="comparison-header">
+                        <span class="comparison-label" style="font-weight: 700;">Total ARS</span>
+                        <span style="font-weight: 700; font-family: 'Courier New', monospace; font-size: 18px; color: var(--danger);" id="totalARS">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USD -->
+            <div class="category-breakdown" style="margin-top: 24px;">
+                <div style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--success);">🪙 Dólares (USD)</div>
+               
+                <div class="form-group">
+                    <label class="form-label">Bank of America</label>
+                    <input type="text" class="form-input" id="bankAmerica" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">PayPal</label>
+                    <input type="text" class="form-input" id="paypal" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Efectivo</label>
+                    <input type="text" class="form-input" id="efectivoUSD" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bull Market</label>
+                    <input type="text" class="form-input" id="bullMarket" placeholder="0.00" inputmode="decimal">
+                </div>
+
+                <div class="comparison-row" style="border-top: 2px solid var(--border-color); padding-top: 12px;">
+                    <div class="comparison-header">
+                        <span class="comparison-label" style="font-weight: 700;">Total USD</span>
+                        <span style="font-weight: 700; font-family: 'Courier New', monospace; font-size: 18px; color: var(--success);" id="totalUSD">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button class="button button-secondary" style="flex: 1;">Cancelar</button>
+                <button class="button button-primary" style="flex: 1;" id="confirmarInicioMes">Confirmar Saldos</button>
+            </div>
+        </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                <!-- SALDO ARS -->
+                <div class="balance-card">
+                    <div class="balance-label">Saldo ARS</div>
+                    <div class="balance-amount" style="font-size: 24px;">$45.320</div>
+                    <div class="balance-currency">Pesos</div>
+                </div>
+
+                <!-- SALDO USD -->
+                <div class="balance-card">
+                    <div class="balance-label">Saldo USD</div>
+                    <div class="balance-amount" style="font-size: 24px;">$432,58</div>
+                    <div class="balance-currency">Dólares</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Ingresos ARS</div>
+                    <div class="stat-value" id="statIngresos">$78.500</div>
+                </div>
+                <div class="stat-card gastos">
+                    <div class="stat-label">Gastos ARS</div>
+                    <div class="stat-value" id="statGastos">$33.180</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Ingresos USD</div>
+                    <div class="stat-value" id="statIngresosUSD">$850,25</div>
+                </div>
+                <div class="stat-card gastos">
+                    <div class="stat-label">Gastos USD</div>
+                    <div class="stat-value" id="statGastosUSD">$420,50</div>
+                </div>
+            </div>
+
+            <div class="quick-buttons">
+                <button class="quick-btn gasto" id="abrirGastoBtn">➖ Nuevo Gasto</button>
+                <button class="quick-btn ingreso" id="abrirIngresoBtn">➕ Nuevo Ingreso</button>
+            </div>
+
+            <div style="margin-top: 20px; background: linear-gradient(135deg, var(--card-bg), rgba(42, 42, 62, 0.5)); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: center;">
+                <button class="button button-secondary" id="iniciarMesBtn" style="width: 100%; margin-bottom: 12px;">📅 Iniciar Nuevo Mes</button>
+                <button class="button button-secondary" id="closeMonthBtn" style="width: 100%;">📋 Cerrar Mes</button>
+            </div>
+        </div>
+
+        <!-- PANTALLA ESTADÍSTICAS -->
+        <div id="estadisticas" class="content-section">
+
+            <div class="month-selector">
+                <label style="font-size: 12px; color: var(--text-secondary);">Mes:</label>
+                <select id="monthSelector">
+                    <option value="2026-03">Marzo 2026</option>
+                    <option value="2026-02">Febrero 2026</option>
+                    <option value="2026-01">Enero 2026</option>
+                    <option value="2025-12">Diciembre 2025</option>
+                </select>
+            </div>
+
+            <!-- ESTADÍSTICAS ARS -->
+            <div id="estadisticasARSSection">
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-card-title">Balance 2026 (ARS)</div>
+                        <div class="summary-card-value">$128.350</div>
+                        <div class="summary-card-change positive">✓ +$45.200</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-title">Balance 2025 (ARS)</div>
+                        <div class="summary-card-value">$83.150</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Año anterior</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Variación</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--success); font-family: 'Courier New', monospace;">+54.2%</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleGastosMes()">
+                        <div style="font-size: 11px;">Gastos del Mes</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📊</div>
+                        <div class="badge">$19.350</div>
+                    </button>
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleIngresosMes()">
+                        <div style="font-size: 11px;">Ingresos del Mes</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📊</div>
+                        <div class="badge" style="background: linear-gradient(135deg, var(--success), #00aa55);">$255.700</div>
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleGastosAño()">
+                        <div style="font-size: 11px;">Gastos del Año</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📈</div>
+                        <div class="badge">+18.5%</div>
+                    </button>
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleIngresosAño()">
+                        <div style="font-size: 11px;">Ingresos del Año</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📈</div>
+                        <div class="badge" style="background: linear-gradient(135deg, var(--success), #00aa55);">-12.3%</div>
+                    </button>
+                </div>
+
+                <div class="category-breakdown">
+                    <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Resumen 2026 (ARS)</div>
+                   
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Total Ingresos</span>
+                            <span style="font-weight: 600; font-family: 'Courier New', monospace;">$255.700</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Total Gastos</span>
+                            <span style="font-weight: 600; font-family: 'Courier New', monospace;">$127.350</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Balance</span>
+                            <span style="font-weight: 600; color: var(--success); font-family: 'Courier New', monospace;">$128.350</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="button button-secondary" style="width: 100%; margin-bottom: 20px;" onclick="exportarDatos()">📥 Exportar Datos ARS</button>
+            </div>
+
+            <!-- ESTADÍSTICAS USD -->
+            <div id="estadisticasUSDSection" style="display: none;">
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-card-title">Balance 2026 (USD)</div>
+                        <div class="summary-card-value">$4.850</div>
+                        <div class="summary-card-change positive">✓ +$1.250</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-title">Balance 2025 (USD)</div>
+                        <div class="summary-card-value">$3.600</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Año anterior</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Variación</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--success); font-family: 'Courier New', monospace;">+34.7%</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleGastosMes()">
+                        <div style="font-size: 11px;">Gastos del Mes</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📊</div>
+                        <div class="badge">$850.50</div>
+                    </button>
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleIngresosMes()">
+                        <div style="font-size: 11px;">Ingresos del Mes</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📊</div>
+                        <div class="badge" style="background: linear-gradient(135deg, var(--success), #00aa55);">$7.250</div>
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleGastosAño()">
+                        <div style="font-size: 11px;">Gastos del Año</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📈</div>
+                        <div class="badge">+22.3%</div>
+                    </button>
+                    <button class="button button-secondary" style="padding: 12px;" onclick="abrirDetalleIngresosAño()">
+                        <div style="font-size: 11px;">Ingresos del Año</div>
+                        <div style="font-size: 18px; margin-top: 4px;">📈</div>
+                        <div class="badge" style="background: linear-gradient(135deg, var(--success), #00aa55);">+5.8%</div>
+                    </button>
+                </div>
+
+                <div class="category-breakdown">
+                    <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Resumen 2026 (USD)</div>
+                   
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Total Ingresos</span>
+                            <span style="font-weight: 600; font-family: 'Courier New', monospace;">$12.450</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Total Gastos</span>
+                            <span style="font-weight: 600; font-family: 'Courier New', monospace;">$7.600</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-row">
+                        <div class="comparison-header">
+                            <span class="comparison-label">Balance</span>
+                            <span style="font-weight: 600; color: var(--success); font-family: 'Courier New', monospace;">$4.850</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="button button-secondary" style="width: 100%; margin-bottom: 20px;" onclick="exportarDatos()">📥 Exportar Datos USD</button>
+            </div>
+        </div>
+
+        <!-- PANTALLA HISTORIAL -->
+        <div id="historial" class="content-section">
+            <!-- HISTORIAL ARS -->
+            <div id="historialARSSection" style="margin-bottom: 24px;">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; padding: 12px; background: linear-gradient(135deg, rgba(255, 68, 68, 0.2), rgba(255, 68, 68, 0.1)); border-radius: 8px; border-left: 3px solid var(--danger);">
+                    💵 Historial en ARS
+                </div>
+
+                <div id="historialARSContainer">
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">Hoy 14:30</div>
+                            <div class="detail-category"><span class="category-icon">🍔</span>Comida</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$285</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">Ayer 09:00</div>
+                            <div class="detail-category"><span class="category-icon">💼</span>Sueldo</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount ingreso">+$78.500</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">18 Mar 08:15</div>
+                            <div class="detail-category"><span class="category-icon">🚗</span>Transporte</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$150</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">18 Mar 15:45</div>
+                            <div class="detail-category"><span class="category-icon">⚡</span>Servicios</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$2.800</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">17 Mar 20:00</div>
+                            <div class="detail-category"><span class="category-icon">🍔</span>Comida</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$450</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIAL USD -->
+            <div id="historialUSDSection" style="margin-bottom: 24px; display: none;">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; padding: 12px; background: linear-gradient(135deg, rgba(0, 217, 120, 0.2), rgba(0, 217, 120, 0.1)); border-radius: 8px; border-left: 3px solid var(--success);">
+                    🪙 Historial en USD
+                </div>
+
+                <div id="historialUSDContainer">
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">15 Mar 19:30</div>
+                            <div class="detail-category"><span class="category-icon">🍔</span>Comida</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$35.50</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">12 Mar 10:00</div>
+                            <div class="detail-category"><span class="category-icon">🎬</span>Entretenimiento</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount gasto">-$15.25</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-left">
+                            <div class="detail-date">10 Mar 14:20</div>
+                            <div class="detail-category"><span class="category-icon">✈️</span>Viaje</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div class="detail-amount ingreso">+$200.00</div>
+                            <button class="action-icon-btn" title="Editar">✏️</button>
+                            <button class="action-icon-btn" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 20px; text-align: center;">
+                Los ítems se eliminan automáticamente después de 7 días
+            </div>
+        </div>
+
+        <!-- PANTALLA CONFIG -->
+        <div id="config" class="content-section">
+            <div class="category-breakdown">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Cotización USD (Blue)</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+                    <div style="font-size: 13px; color: var(--text-secondary);">Valor Actual</div>
+                    <div style="font-weight: 600; color: var(--primary); font-family: 'Courier New', monospace; font-size: 16px;">$1.050</div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">Actualizado hace 2 min</div>
+            </div>
+
+            <div class="category-breakdown">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Gestión</div>
+                <button class="button button-secondary" style="width: 100%; margin-bottom: 12px;">Editar Categorías</button>
+                <button class="button button-secondary" style="width: 100%;">Datos del Año Anterior</button>
+            </div>
+
+            <div class="category-breakdown">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Cambiar Divisas</div>
+                <button class="button button-primary" style="width: 100%; margin-bottom: 12px;">💱 Comprar Dólares</button>
+                <button class="button button-secondary" style="width: 100%;">💱 Vender Dólares</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <button class="nav-button active" data-tab="inicio">
+            <span class="icon">📊</span>
+            Inicio
+        </button>
+        <button class="nav-button" data-tab="historial">
+            <span class="icon">📋</span>
+            Historial
+        </button>
+        <button class="nav-button" data-tab="estadisticas">
+            <span class="icon">📈</span>
+            Estadísticas
+        </button>
+        <button class="nav-button" data-tab="config">
+            <span class="icon">⚙️</span>
+            Config
+        </button>
+    </div>
+</div>
+
+<!-- MODAL AGREGAR -->
+<div id="agregarModal" class="modal">
+    <div class="modal-backdrop" onclick="closeModal('agregarModal')"></div>
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('agregarModal')">✕</button>
+        <div class="modal-header" id="agregarTitle">Nuevo Gasto</div>
+       
+        <div id="tipoIndicador" style="text-align: center; margin-bottom: 20px; font-size: 40px;">➖</div>
+
+        <div class="form-group">
+            <label class="form-label">Categoría</label>
+            <select class="form-select" id="modalCategoria">
+                <option value="">Seleccionar...</option>
+                <option value="Comida">🍔 Comida</option>
+                <option value="Transporte">🚗 Transporte</option>
+                <option value="Servicios">⚡ Servicios</option>
+                <option value="Entretenimiento">🎬 Entretenimiento</option>
+                <option value="Salud">🏥 Salud</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Moneda</label>
+            <div style="display: flex; gap: 8px;">
+                <button class="modal-currency-btn active" data-currency="ARS">ARS</button>
+                <button class="modal-currency-btn" data-currency="USD">USD</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Monto</label>
+            <input type="text" class="form-input monto-input" placeholder="0.00" id="modalMonto" inputmode="decimal" pattern="[0-9.,]*">
+        </div>
+
+        <div class="action-buttons">
+            <button class="button button-secondary" onclick="closeModal('agregarModal')">Cancelar</button>
+            <button class="button button-primary" id="confirmarModal">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentCurrency = 'ARS';
+    let tipoMovimientoActual = 'gasto';
+    let monedaAgregar = 'ARS';
+
+    function updateDate() {
+        const today = new Date();
+        const options = { day: 'numeric', month: 'short' };
+        document.getElementById('currentDate').textContent = today.toLocaleDateString('es-AR', options);
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast success';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // Navegación
+    document.querySelectorAll('.nav-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+           
+            document.getElementById(tab).classList.add('active');
+            btn.classList.add('active');
+           
+            // Mostrar/ocultar toggle de moneda
+            const currencyToggle = document.querySelector('.currency-toggle');
+            if (tab === 'inicio') {
+                currencyToggle.style.display = 'none';
+            } else {
+                currencyToggle.style.display = 'flex';
+            }
+        });
+    });
+
+    // Toggle moneda del header - cambia vista de historial y estadísticas
+    document.querySelectorAll('.currency-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.currency-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCurrency = btn.dataset.currency;
+           
+            // Actualizar estadísticas
+            const estadisticasARS = document.getElementById('estadisticasARSSection');
+            const estadisticasUSD = document.getElementById('estadisticasUSDSection');
+            if (currentCurrency === 'ARS') {
+                estadisticasARS.style.display = 'block';
+                estadisticasUSD.style.display = 'none';
+            } else {
+                estadisticasARS.style.display = 'none';
+                estadisticasUSD.style.display = 'block';
+            }
+           
+            // Actualizar historial
+            const historialARS = document.getElementById('historialARSSection');
+            const historialUSD = document.getElementById('historialUSDSection');
+            if (currentCurrency === 'ARS') {
+                historialARS.style.display = 'block';
+                historialUSD.style.display = 'none';
+            } else {
+                historialARS.style.display = 'none';
+                historialUSD.style.display = 'block';
+            }
+           
+            showToast(`Mostrando en ${currentCurrency}`);
+        });
+    });
+
+    // Botones agregar
+    document.getElementById('abrirGastoBtn').addEventListener('click', () => {
+        tipoMovimientoActual = 'gasto';
+        document.getElementById('agregarTitle').textContent = '➖ Nuevo Gasto';
+        document.getElementById('tipoIndicador').textContent = '➖';
+        openModal('agregarModal');
+    });
+
+    document.getElementById('abrirIngresoBtn').addEventListener('click', () => {
+        tipoMovimientoActual = 'ingreso';
+        document.getElementById('agregarTitle').textContent = '➕ Nuevo Ingreso';
+        document.getElementById('tipoIndicador').textContent = '➕';
+        openModal('agregarModal');
+    });
+
+    // Toggle moneda modal
+    document.querySelectorAll('.modal-currency-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.modal-currency-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            monedaAgregar = this.dataset.currency;
+        });
+    });
+
+    // Confirmar agregar
+    document.getElementById('confirmarModal').addEventListener('click', () => {
+        const categoria = document.getElementById('modalCategoria').value;
+        let monto = document.getElementById('modalMonto').value;
+
+        if (!categoria || !monto) {
+            showToast('Completa categoría y monto', 'error');
+            return;
+        }
+
+        monto = monto.replace(',', '.');
+       
+        if (isNaN(monto) || monto <= 0) {
+            showToast('Ingresa un monto válido', 'error');
+            return;
+        }
+
+        showToast(`✓ ${tipoMovimientoActual === 'gasto' ? '➖' : '➕'} ${categoria} guardado`);
+        closeModal('agregarModal');
+    });
+
+    // Exportar datos
+    function exportarDatos() {
+        showToast('📥 Datos exportados a CSV');
+    }
+
+    // Detalles
+    function abrirDetalleGastosMes() { showToast('Abriendo Gastos del Mes'); }
+    function abrirDetalleIngresosMes() { showToast('Abriendo Ingresos del Mes'); }
+    function abrirDetalleGastosAño() { showToast('Abriendo Gastos del Año'); }
+    function abrirDetalleIngresosAño() { showToast('Abriendo Ingresos del Año'); }
+
+    // Editar y eliminar items
+    document.querySelectorAll('.action-icon-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const detailItem = this.closest('.detail-item');
+            const categoria = detailItem.querySelector('.detail-category').textContent;
+            const monto = detailItem.querySelector('.detail-amount').textContent;
+           
+            if (this.textContent === '✏️') {
+                // Editar
+                showToast(`📝 Editando ${categoria}`);
+                // Aquí abriría un modal para editar
+            } else {
+                // Eliminar
+                showToast(`🗑️ ${categoria} eliminado`);
+                detailItem.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => detailItem.remove(), 300);
+            }
+        });
+    });
+
+    // Animación de salida
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Botón iniciar mes
+    document.getElementById('iniciarMesBtn').addEventListener('click', () => {
+        document.getElementById('inicio').classList.remove('active');
+        document.getElementById('inicioMes').classList.add('active');
+    });
+
+    // Calcular totales ARS
+    const inputsARS = ['bancoCiudad', 'bancoGalicia', 'efectivoARS', 'plazoFijo'];
+    inputsARS.forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            let total = 0;
+            inputsARS.forEach(inputId => {
+                let valor = document.getElementById(inputId).value.replace(',', '.');
+                total += parseFloat(valor) || 0;
+            });
+            document.getElementById('totalARS').textContent = '$' + total.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        });
+    });
+
+    // Calcular totales USD
+    const inputsUSD = ['bankAmerica', 'paypal', 'efectivoUSD', 'bullMarket'];
+    inputsUSD.forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            let total = 0;
+            inputsUSD.forEach(inputId => {
+                let valor = document.getElementById(inputId).value.replace(',', '.');
+                total += parseFloat(valor) || 0;
+            });
+            document.getElementById('totalUSD').textContent = '$' + total.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        });
+    });
+
+    // Confirmar inicio de mes
+    document.getElementById('confirmarInicioMes').addEventListener('click', () => {
+        showToast('✓ Saldos iniciales configurados');
+        document.getElementById('inicioMes').classList.remove('active');
+        document.getElementById('inicio').classList.add('active');
+    });
+
+    updateDate();
+</script>
+```
+
+</body>
+</html>
