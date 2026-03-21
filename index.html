@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzb70exepAqDgkMeh_v9iFJXqb8d8vd1grOjBrSafjjPGeTziVzQUNh2SVrpbsI2GVb/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -663,7 +663,7 @@ function np(key){
 function npConfirm(){
   document.getElementById('np-ov').classList.remove('show');
   if(!npCtx)return;
-  const n=parseFloat(npStr)||0,{idx,moneda}=npCtx,key=moneda+'-'+idx;
+  const n=parseNum(npStr),{idx,moneda}=npCtx,key=moneda+'-'+idx;
   cierreVals[key]=n;
   const ve=document.getElementById('cv-'+moneda+'-'+idx),ee=document.getElementById('ce-'+moneda+'-'+idx);
   ve.textContent=moneda==='USD'?fU(n):fA(n);ve.classList.add('filled');ee.textContent='✓';ee.className='cta-edit done';
@@ -711,7 +711,7 @@ function renderCats(){const cats=S.categorias.filter(c=>c.tipo===addType);docume
 function selCatFn(n){selCat=n;renderCats();}
 function clearAdd(){selCat=null;addType='gasto';addCur='ARS';document.getElementById('add-amount').value='';document.getElementById('add-date').value=todayISO();setAddType('gasto');setAddCur('ARS');}
 async function submitMov(){
-  const amt=parseFloat(document.getElementById('add-amount').value),fecha=document.getElementById('add-date').value||todayISO();
+  const amt=parseNum(document.getElementById('add-amount').value),fecha=document.getElementById('add-date').value||todayISO();
   if(!selCat){toast('Elegí una categoría');return;}if(!amt||amt<=0){toast('Ingresá un monto válido');return;}
   try{
     await api('addMovimiento',{fecha,tipo:addType,categoria:selCat,monto:amt,moneda:addCur});
@@ -745,7 +745,7 @@ function updateDolarUI(){
 }
 function calcConv(){
   const isBuy=convDir==='buy',cot=S.cotizaciones[selCot]||{},rate=isBuy?(cot.compra||0):(cot.venta||0);
-  const from=parseFloat(document.getElementById('conv-inp').value)||0,avail=isBuy?S.balance.balARS:S.balance.balUSD,res=isBuy?from/rate:from*rate;
+  const from=parseNum(document.getElementById('conv-inp').value),avail=isBuy?S.balance.balARS:S.balance.balUSD,res=isBuy?from/rate:from*rate;
   document.getElementById('conv-res').textContent=isBuy?fU(res):fA(res);
   document.getElementById('conv-rt').textContent='Cotización '+selCot.charAt(0).toUpperCase()+selCot.slice(1)+': $'+Math.round(rate).toLocaleString('es-AR');
   const insuf=from>avail;const av=document.getElementById('conv-av');av.textContent=insuf?'⚠ Saldo insuficiente':'Disponible: '+(isBuy?fA(avail):fU(avail));av.className='conv-avail'+(insuf?' err':'');
@@ -753,7 +753,7 @@ function calcConv(){
 }
 function showConvModal(){
   const isBuy=convDir==='buy',cot=S.cotizaciones[selCot]||{},rate=isBuy?(cot.compra||0):(cot.venta||0);
-  const from=parseFloat(document.getElementById('conv-inp').value)||0,res=isBuy?from/rate:from*rate;
+  const from=parseNum(document.getElementById('conv-inp').value),res=isBuy?from/rate:from*rate;
   document.getElementById('cm-title').textContent=isBuy?'Comprar dólares':'Vender dólares';
   document.getElementById('cm-sub').textContent=isBuy?'Convertís pesos a dólares.':'Convertís dólares a pesos.';
   document.getElementById('cm-from').textContent=isBuy?fA(from)+' ARS':fU(from)+' USD';document.getElementById('cm-from').className='mdv';
@@ -765,7 +765,7 @@ function showConvModal(){
 }
 async function confirmConv(){
   const isBuy=convDir==='buy',cot=S.cotizaciones[selCot]||{},rate=isBuy?(cot.compra||0):(cot.venta||0);
-  const from=parseFloat(document.getElementById('conv-inp').value)||0,res=isBuy?from/rate:from*rate;
+  const from=parseNum(document.getElementById('conv-inp').value),res=isBuy?from/rate:from*rate;
   document.getElementById('conv-modal').classList.remove('show');
   try{
     await api('cambiarDivisas',{fecha:todayISO(),direccion:convDir,cotNombre:selCot,tipoCambio:rate,montoOrigen:from,montoDestino:res});
@@ -839,7 +839,7 @@ function renderConfig(){
   renderCatDragEditor('gasto');renderCatDragEditor('ingreso');
 }
 async function saveConfig(){
-  const a=parseFloat(document.getElementById('cfg-init-ars').value)||0,u=parseFloat(document.getElementById('cfg-init-usd').value)||0;
+  const a=parseNum(document.getElementById('cfg-init-ars').value),u=parseNum(document.getElementById('cfg-init-usd').value);
   S.initARS=a;S.initUSD=u;
   try{await api('guardarConfig',{initARS:a,initUSD:u});toast('Saldo inicial guardado');}catch(e){}
 }
@@ -897,24 +897,26 @@ function renderCatDragEditor(tipo){
       <button class="cat-drag-del" onclick="delCat('${tipo}','${c.nombre}')">×</button>
     </div>`).join('');
 
-  // nuevo con emoji picker
   document.getElementById(id).innerHTML=`<div id="cdlist-${tipo}">${rows}</div>
     <div class="cat-add-new">
-      <div class="cat-new-ico-btn" id="cnib-${tipo}" onclick="toggleEP('${tipo}')">${selEmo[tipo]||'📌'}</div>
+      <input class="cat-new-ico-inp" id="cnib-${tipo}" type="text" inputmode="text"
+        placeholder="😀" maxlength="4" value="${selEmo[tipo]||''}"
+        oninput="onEmojiInput('${tipo}',this)"
+        style="width:36px;height:36px;text-align:center;font-size:22px;line-height:1;background:var(--s2);border:.5px solid var(--bd);border-radius:9px;color:var(--tx);padding:0;cursor:pointer;outline:none;"/>
       <input class="cat-new-inp" id="cninp-${tipo}" placeholder="Nueva categoría…" oninput="chkNewCat('${tipo}')"/>
       <button class="cat-new-add" id="cnbtn-${tipo}" onclick="addCatDrag('${tipo}')" style="opacity:.4;">+</button>
-    </div>
-    <div class="emoji-picker" id="ep-${tipo}">
-      ${EMOJIS.map(e=>`<span class="emoji-opt${(selEmo[tipo]||'📌')===e?' sel':''}" onclick="pickEmo('${tipo}','${e}')">${e}</span>`).join('')}
-    </div>`;
+    </div>`;}
+let selEmo={gasto:'',ingreso:''};
+function onEmojiInput(t,el){
+  const segs=[...new Intl.Segmenter('es',{granularity:'grapheme'}).segment(el.value)];
+  const last=segs.length?segs[segs.length-1].segment:'';
+  selEmo[t]=last||el.value;
+  el.value=selEmo[t];
 }
-let selEmo={gasto:'📌',ingreso:'📌'};
-function toggleEP(t){document.getElementById('ep-'+t).classList.toggle('show');}
-function pickEmo(t,e){selEmo[t]=e;document.getElementById('cnib-'+t).textContent=e;document.querySelectorAll('#ep-'+t+' .emoji-opt').forEach(el=>el.classList.toggle('sel',el.textContent===e));document.getElementById('ep-'+t).classList.remove('show');}
 function chkNewCat(t){document.getElementById('cnbtn-'+t).style.opacity=document.getElementById('cninp-'+t).value.trim()?'1':'.4';}
 function addCatDrag(t){
   const inp=document.getElementById('cninp-'+t),name=inp.value.trim();if(!name)return;
-  S.categorias.push({tipo:t,emoji:selEmo[t]||'📌',nombre:name});
+  S.categorias.push({tipo:t,emoji:selEmo[t]||'📌',nombre:name});selEmo[t]='';
   inp.value='';selEmo[t]='📌';
   saveCats();renderCatDragEditor(t);renderCats();
 }
@@ -942,6 +944,10 @@ async function doReset(){
 }
 
 // ══ UTILS ══
+function parseNum(v){
+  if(v===null||v===undefined)return 0;
+  return parseFloat(String(v).replace(/\./g,'').replace(',','.'))||0;
+}
 function fA(n){return'$'+Math.round(n||0).toLocaleString('es-AR');}
 function fU(n){return'US$'+(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function todayISO(){return new Date().toISOString().split('T')[0];}
