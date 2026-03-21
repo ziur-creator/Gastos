@@ -13,7 +13,7 @@
      ║  CONFIGURACIÓN — editá estas dos líneas          ║
      ╚══════════════════════════════════════════════════╝ -->
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzx4lFTrxmaW5GZWyN2G0RBaFzE9PLJPVWteTN_lukzsX9RIvzBAStb7_Owm3RZRpV1/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -416,6 +416,8 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
     <svg class="faceid-icon" viewBox="0 0 24 24"><path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M9 15s1 1.5 3 1.5 3-1.5 3-1.5"/></svg>
     Abrir con Face ID
   </button>
+  <button onclick="testConexion()" style="margin-top:16px;background:none;border:none;color:var(--muted);font-family:var(--f);font-size:13px;cursor:pointer;text-decoration:underline;padding:8px;">Probar conexion con Sheets</button>
+  <div id="diag" style="margin-top:8px;font-size:12px;color:var(--muted);text-align:center;padding:0 24px;line-height:1.6;max-width:340px;word-break:break-all;"></div>
 </div>
 
 <!-- ══ NEW MONTH ══ -->
@@ -684,23 +686,49 @@ let selIco  = { gasto: '📌', ingreso: '📌' };
 
 // ══════════════════════════════════════════════════
 //  API
+//  Apps Script no soporta CORS en POST directo,
+//  así que usamos GET para lecturas y POST con
+//  redirect manual para escrituras.
 // ══════════════════════════════════════════════════
 async function api(action, payload = {}) {
   try {
     setSyncState('spin');
-    const resp = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...payload }),
-    });
-    const data = await resp.json();
+
+    // Acciones de solo lectura → GET (evita problema CORS)
+    const readActions = ['getConfig','getCotizacion','getMovimientos','getResumen'];
+    let data;
+
+    if (readActions.includes(action)) {
+      const params = new URLSearchParams({ action, ...flattenPayload(payload) });
+      const resp   = await fetch(SCRIPT_URL + '?' + params.toString(), { redirect: 'follow' });
+      data = await resp.json();
+    } else {
+      // Escrituras → POST con redirect follow (Apps Script redirige a googleapis.com)
+      const resp = await fetch(SCRIPT_URL, {
+        method:   'POST',
+        redirect: 'follow',
+        headers:  { 'Content-Type': 'text/plain' }, // text/plain evita preflight CORS
+        body:     JSON.stringify({ action, ...payload }),
+      });
+      data = await resp.json();
+    }
+
     setSyncState('ok');
-    if (!data.ok) throw new Error(data.error);
+    if (!data.ok) throw new Error(data.error || JSON.stringify(data));
     return data.data;
   } catch(err) {
     setSyncState('err');
-    toast('Error: ' + err.message);
+    toast('⚠ ' + err.message);
+    console.error('API error:', err);
     throw err;
   }
+}
+
+// Aplana un objeto para query string (solo un nivel)
+function flattenPayload(obj) {
+  const out = {};
+  Object.entries(obj).forEach(([k,v]) => { out[k] = typeof v === 'object' ? JSON.stringify(v) : v; });
+  return out;
 }
 
 // ══════════════════════════════════════════════════
@@ -741,6 +769,32 @@ async function doFaceId() {
     } else {
       toast('Face ID cancelado');
     }
+  }
+}
+
+async function testConexion() {
+  const diag = document.getElementById('diag');
+  diag.style.color = 'var(--muted)';
+  diag.textContent = 'Probando conexion...';
+  if (SCRIPT_URL.includes('TU_DEPLOYMENT_ID')) {
+    diag.style.color = 'var(--red)';
+    diag.textContent = '⚠ Reemplaza TU_DEPLOYMENT_ID con la URL real del deployment en la linea SCRIPT_URL del HTML.';
+    return;
+  }
+  try {
+    const url  = SCRIPT_URL + '?action=ping';
+    const resp = await fetch(url, { redirect: 'follow' });
+    const data = await resp.json();
+    if (data.ok) {
+      diag.style.color = 'var(--green)';
+      diag.textContent = '✓ Conexion OK — ' + (data.data.time || '');
+    } else {
+      diag.style.color = 'var(--red)';
+      diag.textContent = '✗ Error del script: ' + JSON.stringify(data);
+    }
+  } catch(err) {
+    diag.style.color = 'var(--red)';
+    diag.textContent = '✗ ' + err.message + '\n\nVerifica:\n1. URL copiada correctamente\n2. Deploy → Anyone\n3. Ejecutaste "Run" al menos una vez en Apps Script para dar permisos';
   }
 }
 
