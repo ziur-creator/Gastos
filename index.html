@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzkYkkKX0S3pedXbmUbazYdYGvA7qh26V5bSJqZwwYVFr_Hle1zaOPl-XY2r68wD2VD/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -849,6 +849,7 @@ function clearAdd(){
   document.getElementById('add-date').value=todayISO();
   const sel=document.getElementById('add-cats-select');if(sel)sel.value='';
   setAddType('gasto');setAddCur('ARS');
+  const btn3=document.getElementById('add-btn');if(btn3)btn3.disabled=false;
 }
 // ── RECIENTES ──
 let recientesData=[];
@@ -986,6 +987,10 @@ function hideMovimiento(key){
 async function submitMov(){
   const amt=parseNum(document.getElementById('add-amount').value),fecha=document.getElementById('add-date').value||todayISO();
   if(!selCat){toast('Elegí una categoría');return;}if(!amt||amt<=0){toast('Ingresá un monto válido');return;}
+  // show loading state on button
+  const btn=document.getElementById('add-btn');
+  const btnOrig=btn.textContent;
+  btn.textContent='Guardando…';btn.disabled=true;
   try{
     await api('addMovimiento',{fecha,tipo:addType,categoria:selCat,monto:amt,moneda:addCur,cuenta:selCuenta||''});
     if(addType==='gasto'){if(addCur==='ARS')S.balance.outARS+=amt;else S.balance.outUSD+=amt;}
@@ -1007,7 +1012,11 @@ async function submitMov(){
     }
     clearAdd();goView('home');recientesData=[];
     showSuc('✅',addType==='gasto'?'Gasto registrado':'Ingreso registrado',selCat+' · '+(addCur==='ARS'?fA(amt):fU(amt)));
-  }catch(e){}
+  }catch(e){
+    const btn2=document.getElementById('add-btn');
+    if(btn2){btn2.textContent=addType==='gasto'?'Registrar gasto':'Registrar ingreso';btn2.disabled=false;}
+    toast('Error: '+e.message);
+  }
 }
 
 // ══ DOLAR ══
