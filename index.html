@@ -545,7 +545,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1bFjPSM3z9FRYSzm1YSyTs62s-0YA0ziHZgdAuigwZNoh4paAjzNExDgp3O1jTUFU/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -986,12 +986,13 @@ function renderStats(){
   const iTots={};iCats.forEach(c=>{iTots[c]=MOS.reduce((s,m)=>s+(iByMes[m][c]||0),0);});
   renderCatCards(gCats,gByMes,gTots,false,'stats-cats-g');
   renderCatCards(iCats,iByMes,iTots,true,'stats-cats-i');
-  // compare
-  const histMap={};(data.historico||[]).forEach(h=>{histMap[h.tipo+'-'+h.categoria]=h.monto;});
-  const allCatsG=[...new Set([...gCats,...Object.keys(histMap).filter(k=>k.startsWith('Gasto')).map(k=>k.slice(6))])];
-  const allCatsI=[...new Set([...iCats,...Object.keys(histMap).filter(k=>k.startsWith('Ingreso')).map(k=>k.slice(8))])];
-  const mkCmp=(cats,actuMap,histTipo,isInc)=>cats.sort((a,b)=>(actuMap[a]||0)-(actuMap[b]||0)).reverse().map(cat=>{
-    const vC=actuMap[cat]||0,vP=histMap[histTipo+'-'+cat]||0;
+  // compare - use anterior data (gP/iP) for previous year totals
+  const gPTots={};gP.forEach(r=>{gPTots[r.categoria]=(gPTots[r.categoria]||0)+r.monto;});
+  const iPTots={};iP.forEach(r=>{iPTots[r.categoria]=(iPTots[r.categoria]||0)+r.monto;});
+  const allCatsG=[...new Set([...gCats,...Object.keys(gPTots)])];
+  const allCatsI=[...new Set([...iCats,...Object.keys(iPTots)])];
+  const mkCmp=(cats,actuMap,prevMap,isInc)=>cats.sort((a,b)=>(actuMap[a]||0)-(actuMap[b]||0)).reverse().map(cat=>{
+    const vC=actuMap[cat]||0,vP=prevMap[cat]||0;
     const dp=vP?((vC-vP)/vP*100):null;
     const isUp=dp!==null&&dp>0;
     const dcls=dp===null?'delta-neu':isUp?(isInc?'delta-dn':'delta-up'):(isInc?'delta-up':'delta-dn');
@@ -1000,8 +1001,8 @@ function renderStats(){
     return`<div class="cmp-row"><span class="cmp-ico">${ico}</span><span class="cmp-name">${cat}</span><span class="cmp-val">${fK(vC)}</span><span class="cmp-pct ${dcls}">${dstr}</span></div>`;
   }).join('');
   document.getElementById('stats-compare').innerHTML=
-    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Gastos</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsG,gTots,'Gasto',false)+'</div>'+
-    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Ingresos</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsI,iTots,'Ingreso',true)+'</div>';
+    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Gastos '+data.anio+' vs '+data.anioAnterior+'</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsG,gTots,gPTots,false)+'</div>'+
+    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Ingresos '+data.anio+' vs '+data.anioAnterior+'</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsI,iTots,iPTots,true)+'</div>';
 }
 
 // ══ CONFIG ══
@@ -1260,7 +1261,7 @@ function goView(v){
   document.querySelectorAll('.nb').forEach(e=>e.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
   document.getElementById('nb-'+v).classList.add('on');
-  if(v==='stats'&&!S.statsData)loadStats();
+  if(v==='stats')loadStats();
   if(v==='home')renderHome();
   if(v==='dolar')renderDolar();
 }
