@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeK5a00bnNjxQDCOhWUBczfensUCXq8lMavpylV1KARWHiX0pqs4OO_mfM0AoacsZ-/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -941,23 +941,17 @@ async function saveConfig(){
 }
 
 // Cuentas editor con logos PNG
-let dragCtaIdx=null,dragCtaMoneda=null,touchCtaEl=null;
-
 function renderCuentasEditor(moneda){
   const id='cfg-ctas-'+moneda.toLowerCase();
   const ctas=S.cuentas.filter(c=>c.moneda===moneda);
   const rows=ctas.map((c,i)=>{
     const k=logoKey(moneda,c.nombre);
     const logoContent=logos[k]?`<img src="${logos[k]}">`:`<span class="cta-logo-placeholder">${c.nombre.slice(0,2)}</span>`;
-    return`<div class="cta-edit-row" draggable="true"
-        ondragstart="ctaDragStart(event,${i},'${moneda}')"
-        ondragover="ctaDragOver(event)"
-        ondrop="ctaDrop(event,${i},'${moneda}')"
-        ondragend="ctaDragEnd()"
-        ontouchstart="ctaTouchStart(event,${i},'${moneda}')"
-        ontouchmove="ctaTouchMove(event)"
-        ontouchend="ctaTouchEnd(event,${i},'${moneda}')">
-      <span class="drag-handle" style="color:var(--hi);font-size:16px;cursor:grab;flex-shrink:0;">⠿</span>
+    return`<div class="cta-edit-row">
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <button onclick="moveCta('${moneda}',${i},${i-1})" ${i===0?'disabled':''} style="background:none;border:none;color:${i===0?'var(--hi)':'var(--mu)'};font-size:14px;cursor:pointer;padding:0;line-height:1;">▲</button>
+        <button onclick="moveCta('${moneda}',${i},${i+1})" ${i===ctas.length-1?'disabled':''} style="background:none;border:none;color:${i===ctas.length-1?'var(--hi)':'var(--mu)'};font-size:14px;cursor:pointer;padding:0;line-height:1;">▼</button>
+      </div>
       <div class="cta-logo-btn" onclick="triggerLogoUpload('${k}')">
         ${logoContent}
         <div class="upload-badge">+</div>
@@ -973,60 +967,13 @@ function renderCuentasEditor(moneda){
       <button class="cta-add-btn" onclick="addCta('${moneda}')">+</button>
     </div>`;
 }
-
-// mouse drag
-function ctaDragStart(e,idx,moneda){dragCtaIdx=idx;dragCtaMoneda=moneda;setTimeout(()=>e.target.closest('.cta-edit-row')?.classList.add('dragging'),0);}
-function ctaDragOver(e){e.preventDefault();document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('drag-over'));e.currentTarget.classList.add('drag-over');}
-function ctaDragEnd(){document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('dragging','drag-over'));}
-function ctaDrop(e,toIdx,moneda){
-  e.preventDefault();ctaDragEnd();
-  if(dragCtaIdx===null||dragCtaMoneda!==moneda||dragCtaIdx===toIdx)return;
-  moveCta(moneda,dragCtaIdx,toIdx);dragCtaIdx=null;
-}
-
-// touch drag
-let ctaTouchMoved=false;
-function ctaTouchStart(e,idx,moneda){
-  // Don't capture touch if user tapped a button, input or logo
-  const tag=e.target.tagName;
-  if(tag==='BUTTON'||tag==='INPUT'||e.target.closest('.cta-logo-btn')||e.target.closest('.cta-del-btn'))return;
-  dragCtaIdx=idx;dragCtaMoneda=moneda;ctaTouchMoved=false;
-  touchCtaEl=e.currentTarget;
-}
-function ctaTouchMove(e){
-  if(dragCtaIdx===null)return;
-  ctaTouchMoved=true;
-  e.preventDefault();
-  const t=e.touches[0];
-  const el=document.elementFromPoint(t.clientX,t.clientY);
-  const row=el?.closest('.cta-edit-row');
-  document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('drag-over'));
-  if(row&&row!==touchCtaEl){row.classList.add('drag-over');touchCtaEl.classList.add('dragging');}
-}
-function ctaTouchEnd(e,_idx,moneda){
-  if(dragCtaIdx===null)return;
-  ctaDragEnd();
-  if(ctaTouchMoved){
-    const t=e.changedTouches[0];
-    const el=document.elementFromPoint(t.clientX,t.clientY);
-    const row=el?.closest('.cta-edit-row');
-    if(row&&row!==touchCtaEl){
-      const list=touchCtaEl.parentElement;
-      const rows=[...list.querySelectorAll('.cta-edit-row')];
-      const toIdx=rows.indexOf(row);
-      if(toIdx>=0&&toIdx!==dragCtaIdx)moveCta(moneda,dragCtaIdx,toIdx);
-    }
-  }
-  dragCtaIdx=null;touchCtaEl=null;ctaTouchMoved=false;
-}
-
 function moveCta(moneda,fromIdx,toIdx){
   const ctas=S.cuentas.filter(c=>c.moneda===moneda);
+  if(toIdx<0||toIdx>=ctas.length)return;
   const [moved]=ctas.splice(fromIdx,1);ctas.splice(toIdx,0,moved);
   S.cuentas=S.cuentas.filter(c=>c.moneda!==moneda).concat(ctas);
   saveCuentas();renderCuentasEditor(moneda);renderHome();
 }
-
 function renameCta(moneda,idx,newName){
   const ctas=S.cuentas.filter(c=>c.moneda===moneda);if(ctas[idx])ctas[idx].nombre=newName;saveCuentas();}
 function delCta(moneda,idx){
