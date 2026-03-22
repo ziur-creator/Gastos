@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeK5a00bnNjxQDCOhWUBczfensUCXq8lMavpylV1KARWHiX0pqs4OO_mfM0AoacsZ-/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -313,6 +313,12 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .suc-ico{font-size:52px;}
 .suc-title{font-size:20px;font-weight:500;}
 .suc-sub{font-size:13px;color:var(--mu);text-align:center;line-height:1.6;padding:0 32px;}
+.rec-row-hide{animation:fadeOut .3s forwards;}
+@keyframes fadeOut{to{opacity:0;height:0;padding:0;overflow:hidden;}}
+/* PULL TO REFRESH */
+.ptr-indicator{position:absolute;top:-48px;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:13px;gap:8px;pointer-events:none;transition:opacity .2s;}
+.ptr-spinner{width:18px;height:18px;border:2px solid var(--bd);border-top-color:var(--go);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
 /* hidden file input */
 .file-inp{position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;}
 </style>
@@ -342,7 +348,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       <div class="tt" id="home-month">—</div>
       <div class="tamu"><span class="sdot" id="sdot"></span><span id="slbl">Sheets</span></div>
     </div>
-    <div class="scroll">
+    <div class="scroll" style="position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-home"><div class="ptr-spinner" style="display:none" id="ptr-spin-home"></div><span id="ptr-txt-home">↓ Deslizá para actualizar</span></div>
       <div class="bal-cards">
         <div class="bcard">
           <div class="bcard-top" onclick="toggleDet('ars')">
@@ -412,10 +418,20 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
   <!-- ADD -->
   <div id="v-add" style="display:none;flex-direction:column;height:100%;">
     <div class="sb"></div>
-    <div class="topbar"><div class="tt">Nuevo movimiento</div><button class="ta" onclick="clearAdd()">Limpiar</button></div>
-    <div class="scroll">
+    <div class="topbar"><div class="tt">Movimientos</div><button class="ta" id="add-clear-btn" onclick="clearAdd()">Limpiar</button></div>
+    <!-- tabs -->
+    <div style="display:flex;background:var(--s1);border-radius:11px;padding:3px;gap:3px;margin:0 20px 12px;flex-shrink:0;">
+      <button id="add-tab-nuevo" class="topt ag" onclick="setAddTab('nuevo')" style="background:var(--gobg);color:var(--go);">Nuevo</button>
+      <button id="add-tab-recientes" class="topt" onclick="setAddTab('recientes')">Recientes</button>
+    </div>
+    <!-- NUEVO -->
+    <div id="add-panel-nuevo" class="scroll" style="position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-nuevo"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-nuevo"></div><span id="ptr-txt-add-nuevo">↓ Deslizá para actualizar</span></div>
       <div class="add-wrap">
-        <div class="type-tog"><button class="topt ag" id="opt-g" onclick="setAddType('gasto')">Gasto</button><button class="topt" id="opt-i" onclick="setAddType('ingreso')">Ingreso</button></div>
+        <!-- tipo + moneda toggle en la misma fila -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="type-tog"><button class="topt ag" id="opt-g" onclick="setAddType('gasto')">Gasto</button><button class="topt" id="opt-i" onclick="setAddType('ingreso')">Ingreso</button></div>
+          <div class="type-tog"><button class="topt" id="add-ars" onclick="setAddCur('ARS')" style="background:var(--gobg);color:var(--go);">ARS $</button><button class="topt" id="add-usd" onclick="setAddCur('USD')">USD $</button></div>
+        </div>
         <div class="fl"><div class="flbl">Categoría</div>
           <select id="add-cats-select" onchange="selCatFn(this.value)" style="width:100%;padding:13px 14px;background:var(--s1);border:.5px solid var(--bd);border-radius:11px;color:var(--tx);font-family:var(--f);font-size:15px;outline:none;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(240,237,232,0.4)%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 14px center;background-size:18px;">
             <option value="">Elegí una categoría…</option>
@@ -423,23 +439,31 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
         </div>
         <div class="fl"><div class="flbl">Cuenta</div><div class="cat-grid" id="add-cuenta-cont"></div></div>
         <div class="fl"><div class="flbl">Monto</div>
-          <div class="amt-row">
-            <input class="finput" type="text" id="add-amount" placeholder="0" inputmode="decimal" style="font-size:28px;font-family:var(--fm);font-weight:500;"/>
-            <div class="cur-tog"><button class="cur-b on" id="add-ars" onclick="setAddCur('ARS')">ARS</button><button class="cur-b" id="add-usd" onclick="setAddCur('USD')">USD</button></div>
-          </div>
+          <input class="finput" type="text" id="add-amount" placeholder="0" inputmode="decimal" style="font-size:28px;font-family:var(--fm);font-weight:500;"/>
         </div>
         <div class="fl"><div class="flbl">Fecha</div><input class="finput" type="date" id="add-date"/></div>
         <button class="btn-p" id="add-btn" onclick="submitMov()">Registrar gasto</button>
       </div>
     </div>
-    <nav class="bnav"><button class="nb" onclick="goView('home')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg><span class="nl">Inicio</span></button><button class="nb on" onclick="goView('add')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="nl">Agregar</span></button><button class="nb" onclick="goView('dolar')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v1m0 8v1M9.5 9.5A2.5 2.5 0 0112 8a2.5 2.5 0 010 5 2.5 2.5 0 010 5 2.5 2.5 0 002.5-1.5"/></svg><span class="nl">Dólar</span></button><button class="nb" onclick="goView('stats')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="9.5" y="7" width="4" height="14" rx="1"/><rect x="16" y="3" width="4" height="18" rx="1"/></svg><span class="nl">Stats</span></button><button class="nb" onclick="goView('config')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Config</span></button></nav>
+    <!-- RECIENTES -->
+    <div id="add-panel-recientes" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(--sb)+80px);position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-recientes"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-recientes"></div><span id="ptr-txt-add-recientes">↓ Deslizá para actualizar</span></div>
+      <div style="padding:12px 16px 6px;font-size:11px;color:var(--hi);text-transform:uppercase;letter-spacing:.07em;">Últimos 7 días — deslizá para actualizar</div>
+      <div id="recientes-list" style="padding:0 16px;"></div>
+    </div>
+    <nav class="bnav">
+      <button class="nb" onclick="goView('home')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg><span class="nl">Inicio</span></button>
+      <button class="nb on" onclick="goView('add')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="nl">Agregar</span></button>
+      <button class="nb" onclick="goView('dolar')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v1m0 8v1M9.5 9.5A2.5 2.5 0 0112 8a2.5 2.5 0 010 5 2.5 2.5 0 010 5 2.5 2.5 0 002.5-1.5"/></svg><span class="nl">Dólar</span></button>
+      <button class="nb" onclick="goView('stats')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="9.5" y="7" width="4" height="14" rx="1"/><rect x="16" y="3" width="4" height="18" rx="1"/></svg><span class="nl">Stats</span></button>
+      <button class="nb" onclick="goView('config')"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="nl">Config</span></button>
+    </nav>
   </div>
 
-  <!-- DOLAR -->
+    <!-- DOLAR -->
   <div id="v-dolar" style="display:none;flex-direction:column;height:100%;">
     <div class="sb"></div>
     <div class="topbar"><div class="tt">Cambio de divisas</div><div class="tamu" id="cot-time">—</div></div>
-    <div class="scroll">
+    <div class="scroll" style="position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-dolar"><div class="ptr-spinner" style="display:none" id="ptr-spin-dolar"></div><span id="ptr-txt-dolar">↓ Deslizá para actualizar</span></div>
       <div class="dir-tog"><button class="dir-opt buy" id="dir-buy" onclick="setDir('buy')">🇺🇸 Comprar USD</button><button class="dir-opt" id="dir-sell" onclick="setDir('sell')">Vender USD 🇦🇷</button></div>
       <div style="padding:0 16px 6px;font-size:11px;color:var(--hi);text-transform:uppercase;letter-spacing:.08em;">Cotización</div>
       <div class="cot-row" id="cot-row"></div>
@@ -460,7 +484,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
   <div id="v-stats" style="display:none;flex-direction:column;height:100%;">
     <div class="sb"></div>
     <div class="topbar"><div class="tt">Resumen anual</div></div>
-    <div class="scroll">
+    <div class="scroll" style="position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-stats"><div class="ptr-spinner" style="display:none" id="ptr-spin-stats"></div><span id="ptr-txt-stats">↓ Deslizá para actualizar</span></div>
       <div class="year-sw"><span style="font-size:18px;color:var(--hi);">‹</span><span class="year-val" id="stats-yr">2026</span><span class="year-vs">vs</span><span class="year-val" style="color:var(--mu);" id="stats-pyr">2025</span><span style="font-size:18px;color:var(--hi);">›</span></div>
       <div class="cur-tog2"><button class="copt on" id="sars" onclick="setStatsCur('ARS')">🇦🇷 Pesos ARS</button><button class="copt" id="susd" onclick="setStatsCur('USD')">🇺🇸 Dólares USD</button></div>
       <div class="section-hd">Gastos mensuales por categoría</div>
@@ -479,11 +503,11 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
   <div id="v-config" style="display:none;flex-direction:column;height:100%;">
     <div class="sb"></div>
     <div class="topbar"><div class="tt">Configuración</div><button class="ta" style="color:var(--rd);" onclick="lockApp()">Salir</button></div>
-    <div class="scroll">
+    <div class="scroll" style="position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-config"><div class="ptr-spinner" style="display:none" id="ptr-spin-config"></div><span id="ptr-txt-config">↓ Deslizá para actualizar</span></div>
       <div class="cfg-sec"><div class="cfg-lbl">Cuenta Google</div>
         <div class="cfg-card">
           <div class="cfg-row"><span class="cfg-key">Google Sheets</span><span class="cfg-val ok" id="cfg-status">Conectado</span></div>
-          <div class="cfg-row" style="cursor:pointer;" onclick="syncNow()"><span class="cfg-key">Sincronizar desde Sheets</span><span class="cfg-val">↓</span></div>
+
         </div>
       </div>
 
@@ -491,14 +515,15 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Cuentas USD</div><div class="cfg-card" id="cfg-ctas-usd"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Categorías de gastos</div><div class="cfg-card" id="cat-card-gasto"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Categorías de ingresos</div><div class="cfg-card" id="cat-card-ingreso"></div></div>
-      <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Datos históricos 2025</div>
-        <div class="cfg-card">
-          <div class="cfg-row" style="cursor:pointer;" onclick="syncHistorico()">
-            <span class="cfg-key">Sincronizar desde Sheets</span>
-            <span class="cfg-val">↓</span>
-          </div>
+      <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Datos históricos y meses anteriores</div>
+        <div class="cfg-note" style="padding:0;line-height:1.7;">Editá las hojas en Sheets y deslizá hacia abajo para sincronizar.<br>
+          <b>Historico2025:</b> Tipo | Categoria | Monto | Moneda<br>
+          <b>Resumen anual:</b> Anio | Mes | Tipo | Categoria | Monto | Moneda | Cuenta<br>
+          <b>SaldosCuentas:</b> Mes | Moneda | Cuenta | SaldoInicial | 0 | 0 | SaldoInicial
         </div>
-        <div class="cfg-note">Editá la hoja "Historico2025" en Sheets con columnas: Tipo, Categoria, Monto, Moneda.</div>
+      </div>
+      <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Saldos iniciales por cuenta</div>
+        <div class="cfg-note" style="padding:0;">En la hoja "SaldosCuentas" de Sheets agregá una fila por cuenta: Mes (ej: Ene2026) | Moneda | Cuenta | SaldoInicial | 0 | 0 | SaldoInicial. Luego deslizá hacia abajo para sincronizar.</div>
       </div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Meses anteriores 2026</div>
         <div class="cfg-card">
@@ -757,7 +782,23 @@ async function confirmarCierre(){
 }
 
 // ══ ADD ══
-function renderAdd(){renderCats();renderCuentaSelector();document.getElementById('add-date').value=todayISO();}
+function renderAdd(){
+  renderCats();renderCuentaSelector();
+  document.getElementById('add-date').value=todayISO();
+  setAddCur(addCur); // sync toggle state
+}
+let addTab='nuevo';
+function setAddTab(tab){
+  addTab=tab;
+  document.getElementById('add-panel-nuevo').style.display=tab==='nuevo'?'block':'none';
+  document.getElementById('add-panel-recientes').style.display=tab==='recientes'?'block':'none';
+  document.getElementById('add-clear-btn').style.display=tab==='nuevo'?'':'none';
+  document.getElementById('add-tab-nuevo').style.background=tab==='nuevo'?'var(--gobg)':'';
+  document.getElementById('add-tab-nuevo').style.color=tab==='nuevo'?'var(--go)':'';
+  document.getElementById('add-tab-recientes').style.background=tab==='recientes'?'var(--gobg)':'';
+  document.getElementById('add-tab-recientes').style.color=tab==='recientes'?'var(--go)':'';
+  if(tab==='recientes')loadRecientes();
+}
 function renderCuentaSelector(){
   const moneda=addCur;
   const ctas=S.cuentas.filter(c=>c.moneda===moneda);
@@ -766,8 +807,23 @@ function renderCuentaSelector(){
   cont.innerHTML=ctas.map(c=>`<div class="chip${selCuenta===c.nombre?' sel':''}" onclick="selCuentaFn('${c.nombre.replace(/'/g,"\'")}')"><span class="chi">${getLogoHTML(moneda,c.nombre,18)}</span><span>${c.nombre}</span></div>`).join('');
 }
 function selCuentaFn(n){selCuenta=n;renderCuentaSelector();}
-function setAddType(t){addType=t;selCat=null;document.getElementById('opt-g').className='topt'+(t==='gasto'?' ag':'');document.getElementById('opt-i').className='topt'+(t==='ingreso'?' ai':'');document.getElementById('add-btn').textContent=t==='gasto'?'Registrar gasto':'Registrar ingreso';renderCats();}
-function setAddCur(c){addCur=c;selCuenta=null;document.getElementById('add-ars').className='cur-b'+(c==='ARS'?' on':'');document.getElementById('add-usd').className='cur-b'+(c==='USD'?' on':'');renderCuentaSelector();}
+function setAddType(t){
+  addType=t;selCat=null;
+  const og=document.getElementById('opt-g'),oi=document.getElementById('opt-i');
+  if(og)og.className='topt'+(t==='gasto'?' ag':'');
+  if(oi)oi.className='topt'+(t==='ingreso'?' ai':'');
+  const btn=document.getElementById('add-btn');
+  if(btn)btn.textContent=t==='gasto'?'Registrar gasto':'Registrar ingreso';
+  renderCats();renderCuentaSelector();
+}
+function setAddCur(cur){
+  addCur=cur;selCuenta=null;
+  const ars=document.getElementById('add-ars');
+  const usd=document.getElementById('add-usd');
+  if(ars){ars.className='topt'+(cur==='ARS'?' on':'');if(cur==='ARS'){ars.style.background='var(--gobg)';ars.style.color='var(--go)';}else{ars.style.background='';ars.style.color='';}}
+  if(usd){usd.className='topt'+(cur==='USD'?' on':'');if(cur==='USD'){usd.style.background='var(--gobg)';usd.style.color='var(--go)';}else{usd.style.background='';usd.style.color='';}}
+  renderCuentaSelector();
+}
 function renderCats(){
   const cats=S.categorias.filter(c=>c.tipo===addType);
   const sel=document.getElementById('add-cats-select');
@@ -785,6 +841,60 @@ function clearAdd(){
   const sel=document.getElementById('add-cats-select');if(sel)sel.value='';
   setAddType('gasto');setAddCur('ARS');
 }
+// ── RECIENTES ──
+let recientesData=[];
+async function loadRecientes(){
+  try{
+    const d=await api('getMovimientos',{mes:S.ultimoMes});
+    const cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);
+    recientesData=(d.rows||[]).filter(r=>{
+      const rd=new Date(r.fecha);return rd>=cutoff;
+    });
+    renderRecientes();
+  }catch(e){}
+}
+function renderRecientes(){
+  const cont=document.getElementById('recientes-list');
+  if(!cont)return;
+  // check which are hidden (soft-deleted from view)
+  const hidden=JSON.parse(localStorage.getItem('hidden_movs')||'[]');
+  const visible=recientesData.filter(r=>!hidden.includes(r.fecha+'_'+r.categoria+'_'+r.monto));
+  if(!visible.length){cont.innerHTML='<div class="empty-state">Sin movimientos en los últimos 7 días.</div>';return;}
+  cont.innerHTML=visible.map((r,i)=>{
+    const isG=r.tipo==='Gasto'||r.tipo==='gasto';
+    const ico=S.categorias.find(c=>c.nombre===r.categoria)?.emoji||'📌';
+    const fecha=r.fecha?r.fecha.split('-').reverse().join('/'):'';
+    const monto=(r.moneda==='USD'?fU:fA)(r.monto);
+    const key=r.fecha+'_'+r.categoria+'_'+r.monto;
+    return`<div class="hist-row" id="rec-row-${i}">
+      <div class="hist-ico ${isG?'hico-sell':'hico-buy'}">${ico}</div>
+      <div class="hist-info">
+        <div class="hist-op">${r.categoria}${r.cuenta?' · '+r.cuenta:''}</div>
+        <div class="hist-dt">${fecha}${r.moneda?' · '+r.moneda:''}</div>
+      </div>
+      <div class="hist-amts">
+        <div class="hist-to ${isG?'':'hto-buy'}" style="${isG?'color:var(--rd)':''}">${isG?'−':'+'} ${monto}</div>
+      </div>
+      <button onclick="hideMovimiento('${key}',${i})" style="background:none;border:none;color:var(--rd);font-size:20px;padding:4px 4px 4px 10px;cursor:pointer;opacity:.6;">×</button>
+    </div>`;
+  }).join('');
+}
+function hideMovimiento(key,i){
+  // soft-delete: hides from list but keeps in Sheets calculations
+  const hidden=JSON.parse(localStorage.getItem('hidden_movs')||'[]');
+  if(!hidden.includes(key))hidden.push(key);
+  localStorage.setItem('hidden_movs',JSON.stringify(hidden));
+  // auto-expire: clean keys older than 8 days
+  const now=new Date();
+  const fresh=hidden.filter(k=>{
+    const datePart=k.split('_')[0];
+    if(!datePart)return false;
+    const d=new Date(datePart);
+    return(now-d)<8*24*60*60*1000;
+  });
+  localStorage.setItem('hidden_movs',JSON.stringify(fresh));
+  renderRecientes();
+}
 async function submitMov(){
   const amt=parseNum(document.getElementById('add-amount').value),fecha=document.getElementById('add-date').value||todayISO();
   if(!selCat){toast('Elegí una categoría');return;}if(!amt||amt<=0){toast('Ingresá un monto válido');return;}
@@ -793,7 +903,7 @@ async function submitMov(){
     if(addType==='gasto'){if(addCur==='ARS')S.balance.outARS+=amt;else S.balance.outUSD+=amt;}
     else{if(addCur==='ARS')S.balance.inARS+=amt;else S.balance.inUSD+=amt;}
     S.balance.balARS=S.balance.inARS-S.balance.outARS;S.balance.balUSD=S.balance.inUSD-S.balance.outUSD;
-    clearAdd();goView('home');
+    clearAdd();goView('home');recientesData=[];// reset so next time reloads
     showSuc('✅',addType==='gasto'?'Gasto registrado':'Ingreso registrado',selCat+' · '+(addCur==='ARS'?fA(amt):fU(amt)));
   }catch(e){}
 }
@@ -851,7 +961,12 @@ async function confirmConv(){
 }
 
 // ══ STATS ══
-async function loadStats(){try{const d=await api('getResumen',{anio:new Date().getFullYear()});S.statsData=d;renderStats();}catch(e){}}
+async function loadStats(){
+  const yr=new Date().getFullYear();
+  document.getElementById('stats-yr').textContent=yr;
+  document.getElementById('stats-pyr').textContent=yr-1;
+  try{const d=await api('getResumen',{anio:yr});S.statsData=d;renderStats();}catch(e){}
+}
 function setStatsCur(c){statsCur=c;document.getElementById('sars').className='copt'+(c==='ARS'?' on':'');document.getElementById('susd').className='copt'+(c==='USD'?' on':'');renderStats();}
 function renderStats(){
   const d=S.statsData;if(!d)return;
@@ -942,6 +1057,14 @@ function renderStats(){
 }
 
 // ══ CONFIG ══
+async function syncSaldos(){
+  try{
+    const cfg=await api('getConfig');
+    S.saldosCuentas=cfg.saldosCuentas||[];
+    renderHome();
+    toast('Saldos sincronizados ✓');
+  }catch(e){toast('Error al sincronizar');}
+}
 async function syncResumen(){
   try{
     S.statsData=null;
@@ -1119,13 +1242,80 @@ async function doReset(){
   try{await api('resetApp');localStorage.clear();showSuc('🔄','App reseteada','Recargá la página para comenzar de nuevo.');setTimeout(()=>location.reload(),2500);}catch(e){}
 }
 
+// ══ PULL TO REFRESH ══
+let ptrStartY=0,ptrActive=false,ptrCurrentView='home',ptrRefreshing=false;
+function ptrTouchStart(e){ptrStartY=e.touches[0].clientY;ptrActive=e.currentTarget.scrollTop===0;}
+function ptrTouchMove(e){
+  if(!ptrActive||ptrRefreshing)return;
+  const dy=e.touches[0].clientY-ptrStartY;
+  if(dy>60){
+    // show spinner
+    const views=['home','add','dolar','stats','config'];
+    views.forEach(v=>{
+      const ind=document.getElementById('ptr-'+v);
+      const spin=document.getElementById('ptr-spin-'+v);
+      const txt=document.getElementById('ptr-txt-'+v);
+      if(ind){ind.style.top='0px';}
+      if(spin)spin.style.display='block';
+      if(txt)txt.textContent='Soltá para actualizar';
+    });
+  }
+}
+async function ptrTouchEnd(e){
+  if(!ptrActive||ptrRefreshing)return;
+  const dy=e.changedTouches[0].clientY-ptrStartY;
+  ptrActive=false;
+  if(dy<60){
+    // reset indicators
+    resetPTR();return;
+  }
+  ptrRefreshing=true;
+  setSS('spin');
+  try{
+    const cfg=await api('getConfig');
+    Object.assign(S,{initARS:cfg.initARS,initUSD:cfg.initUSD,ultimoMes:cfg.ultimoMes,
+      categorias:cfg.categorias,cuentas:cfg.cuentas,balance:cfg.balance,saldosCuentas:cfg.saldosCuentas||[]});
+    const cot=await api('getCotizacion');S.cotizaciones=cot;S.cotFecha=cot.fecha;
+    try{const h=await api('getHistorico');S.historico=h||[];}catch(e2){}
+    try{const lg=await api('getLogos');if(lg&&Object.keys(lg).length){Object.assign(logos,lg);localStorage.setItem('logos',JSON.stringify(logos));}}catch(e2){}
+    S.statsData=null;
+    renderHome();renderAdd();renderDolar();renderConfig();
+    if(document.getElementById('v-stats').style.display!=='none')loadStats();
+    toast('Actualizado ✓');
+  }catch(err){toast('Error al actualizar');}
+  finally{ptrRefreshing=false;resetPTR();}
+}
+function resetPTR(){
+  ['home','add','dolar','stats','config'].forEach(v=>{
+    const ind=document.getElementById('ptr-'+v);
+    const spin=document.getElementById('ptr-spin-'+v);
+    const txt=document.getElementById('ptr-txt-'+v);
+    if(ind)ind.style.top='-48px';
+    if(spin)spin.style.display='none';
+    if(txt)txt.textContent='↓ Deslizá para actualizar';
+  });
+}
+
 // ══ UTILS ══
 function parseNum(v){
-  if(v===null||v===undefined)return 0;
-  return parseFloat(String(v).replace(/\./g,'').replace(',','.'))||0;
+  if(v===null||v===undefined||v==='')return 0;
+  if(typeof v==='number')return v;
+  let s=String(v).trim().replace(/[$\u20ac\u00a3\u00a5\s]/g,'');
+  // "6.000.000" or "6.000,50" -> dot is thousands, comma is decimal
+  if(s.match(/\.\d{3}/)&&!s.match(/,\d{3}/)){
+    s=s.replace(/\./g,'').replace(',','.');
+  } else {
+    s=s.replace(/,/g,'');
+  }
+  return parseFloat(s)||0;
 }
 function fA(n){return'$'+Math.round(n||0).toLocaleString('es-AR');}
-function fU(n){return'US$'+(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fU(n){
+  const v=n||0;
+  // show cents only if not a round number
+  const opts=Number.isInteger(v)?{minimumFractionDigits:0,maximumFractionDigits:0}:{minimumFractionDigits:2,maximumFractionDigits:2};
+  return'US$'+v.toLocaleString('es-AR',opts);
+}
 function todayISO(){return new Date().toISOString().split('T')[0];}
 function setSS(s){const d=document.getElementById('sdot'),l=document.getElementById('slbl');d.className='sdot'+(s==='spin'?' spin':s==='err'?' err':'');l.textContent=s==='spin'?'Sincronizando…':'Sheets';}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
