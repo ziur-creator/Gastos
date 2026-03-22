@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbycfNfxfY4cK4ENR3ZyI_TJJQIS1bAogGvTfk_paDdajHxqaDvXAK7jo08_ikTuNvcu/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -878,7 +878,7 @@ function renderRecientes(){
   if(!cont)return;
   // check which are hidden (soft-deleted from view)
   const hidden=JSON.parse(localStorage.getItem('hidden_movs')||'[]');
-  const visible=recientesData.filter(r=>!hidden.includes(mkKey(r)));
+  const visible=recientesData.map((r,origIdx)=>({...r,origIdx})).filter(r=>!hidden.includes(mkKey(r)));
   if(!visible.length){cont.innerHTML='<div class="empty-state">Sin movimientos en los últimos 7 días.</div>';return;}
   cont.innerHTML=visible.map((r,i)=>{
     const isG=r.tipo==='Gasto'||r.tipo==='gasto';
@@ -895,7 +895,7 @@ function renderRecientes(){
       <div class="hist-amts">
         <div class="hist-to ${isG?'':'hto-buy'}" style="${isG?'color:var(--rd)':''}">${isG?'−':'+'} ${monto}</div>
       </div>
-      <button onclick="deleteMovimiento(${i})" style="background:none;border:none;color:var(--rd);font-size:20px;padding:4px 4px 4px 10px;cursor:pointer;opacity:.6;">×</button>
+      <button onclick="deleteMovimiento(${r.origIdx})" style="background:none;border:none;color:var(--rd);font-size:20px;padding:4px 4px 4px 10px;cursor:pointer;opacity:.6;">×</button>
     </div>`;
   }).join('');
 }
