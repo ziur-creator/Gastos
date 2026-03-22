@@ -545,7 +545,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1bFjPSM3z9FRYSzm1YSyTs62s-0YA0ziHZgdAuigwZNoh4paAjzNExDgp3O1jTUFU/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -935,8 +935,10 @@ async function confirmConv(){
 async function loadStats(){
   try{
     const data=await api('getResumen',{anio:new Date().getFullYear()});
-    S.statsData=data;renderStats();
-  }catch(e){}
+    S.statsData=data;
+    toast('2026:'+(data.actual||[]).length+' 2025:'+(data.anterior||[]).length);
+    renderStats();
+  }catch(e){toast('Error stats:'+e.message);}
 }
 function setStatsCur(c){
   statsCur=c;
