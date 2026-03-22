@@ -58,7 +58,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .view.on{display:flex;}
 
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);}
 .bnav-row{display:flex;align-items:center;height:49px;}
 .bnav-safe{display:none;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
@@ -452,7 +452,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
   <!-- CONFIG -->
   <div class="view" id="v-config">
     <div class="sb"></div>
-    <div class="topbar"><div class="tt">Configuración</div><button class="ta" style="color:var(--rd);" onclick="lockApp()">Salir</button></div>
+    <div class="topbar"><div class="tt">Configuración</div><button class="ta" style="color:var(--rd);" onclick="showLockModal()">Salir</button></div>
     <div class="scroll" ontouchstart="ptrStart(event,this)" ontouchmove="ptrMove(event,this)" ontouchend="ptrEnd(event,this)">
       <div class="ptr hidden" id="ptr-4"><div class="ptr-spin"></div>Actualizando…</div>
       <div class="cfg-sec"><div class="cfg-lbl">Cuentas ARS</div><div class="cfg-card" id="cfg-ctas-ars"></div></div>
@@ -540,12 +540,22 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
     <button class="btn-xs" onclick="document.getElementById('reset-modal').classList.remove('show')">Cancelar</button>
   </div>
 </div>
+<!-- LOCK MODAL -->
+<div class="modal-ov" id="lock-modal">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtitle">Cerrar sesión</div>
+    <div class="msub">Vas a volver a la pantalla de inicio.<br>Los datos quedan guardados en Sheets.</div>
+    <button class="btn-confirm danger" onclick="confirmLock()">Sí, salir</button>
+    <button class="btn-xs" onclick="document.getElementById('lock-modal').classList.remove('show')">Cancelar</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="suc-ov" id="suc"><div class="suc-ico" id="suc-ico">✅</div><div class="suc-title" id="suc-title">—</div><div class="suc-sub" id="suc-sub">—</div></div>
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1bFjPSM3z9FRYSzm1YSyTs62s-0YA0ziHZgdAuigwZNoh4paAjzNExDgp3O1jTUFU/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -613,6 +623,8 @@ async function enterApp(){
   try{await syncNow();}catch(e){}
 }
 function lockApp(){showScr('s-lock');}
+function showLockModal(){document.getElementById('lock-modal').classList.add('show');}
+function confirmLock(){document.getElementById('lock-modal').classList.remove('show');lockApp();}
 
 // ══ SCREENS ══
 function showScr(id){
@@ -643,6 +655,12 @@ async function syncNow(){
     S.saldosCuentas=Object.values(saldoMap);
     const cot=await api('getCotizacion');
     S.cotizaciones=cot;S.cotFecha=cot.fecha;
+    // merge logos from Sheets into localStorage
+    if(cfg.logos&&Object.keys(cfg.logos).length>0){
+      const local=JSON.parse(localStorage.getItem('logos')||'{}');
+      const merged=Object.assign({},cfg.logos,local); // local overrides Sheets
+      localStorage.setItem('logos',JSON.stringify(merged));
+    }
     renderHome();renderAdd();renderDolar();renderConfig();
     toast('Sincronizado ✓');
   }catch(e){}
@@ -1035,6 +1053,13 @@ function movCta(moneda,idx,dir){
   S.cuentas=S.cuentas.filter(c=>c.moneda!==moneda).concat(ctas);
   saveCuentas();renderCtasEditor(moneda);
 }
+function movCat(tipo,idx,dir){
+  const cats=S.categorias.filter(c=>c.tipo===tipo);
+  const to=idx+dir;if(to<0||to>=cats.length)return;
+  [cats[idx],cats[to]]=[cats[to],cats[idx]];
+  S.categorias=S.categorias.filter(c=>c.tipo!==tipo).concat(cats);
+  saveCats();renderCatsEditor(tipo);renderAdd();
+}
 function delCta(moneda,nombre){
   S.cuentas=S.cuentas.filter(c=>!(c.moneda===moneda&&c.nombre===nombre));
   saveCuentas();renderCtasEditor(moneda);renderAdd();
@@ -1057,14 +1082,13 @@ let selEmojiTipo=null,selEmoji={gasto:'📌',ingreso:'📌'};
 function renderCatsEditor(tipo){
   const id='cfg-cats-'+tipo;
   const cats=S.categorias.filter(c=>c.tipo===tipo);
-  const emojiPicker='';
   document.getElementById(id).innerHTML=
-    cats.map(c=>`<div class="cat-edit-row"><span class="cat-edit-ico" style="cursor:pointer;" onclick="changeEmoji('${tipo}','${c.nombre.replace(/'/g,"\\'")}')">${c.emoji}</span><span class="cat-edit-name">${c.nombre}</span><button class="cat-del-btn" onclick="delCat('${tipo}','${c.nombre.replace(/'/g,"\\'")}')">×</button></div>`).join('')+
+    cats.map((cat,i)=>`<div class="cat-edit-row"><span class="cat-edit-ico" style="cursor:pointer;" onclick="changeEmoji('${tipo}','${cat.nombre.replace(/'/g,"\\'")}')">${cat.emoji}</span><span class="cat-edit-name">${cat.nombre}</span><div class="cta-btns"><button class="cta-btn" onclick="movCat('${tipo}',${i},-1)">▲</button><button class="cta-btn" onclick="movCat('${tipo}',${i},1)">▼</button><button class="cta-btn del" onclick="delCat('${tipo}','${cat.nombre.replace(/'/g,"\\'")}')">×</button></div></div>`).join('')+
     `<div class="cta-add-row">
       <span id="new-ico-${tipo}" style="font-size:20px;cursor:pointer;width:28px;text-align:center;flex-shrink:0;" onclick="toggleEmojiPicker('${tipo}')">${selEmoji[tipo]}</span>
       <input class="cta-add-inp" id="cat-inp-${tipo}" placeholder="Nueva categoría…">
       <button class="cta-add-btn" onclick="addCat('${tipo}')">+</button>
-    </div>`+emojiPicker;
+    </div>`;
 }
 function toggleEmojiPicker(tipo){
   // Show emoji overlay input
@@ -1285,6 +1309,8 @@ function uploadLogo(key){
       logos[inp._key]=ev.target.result;
       localStorage.setItem('logos',JSON.stringify(logos));
       renderCtasEditor('ARS');renderCtasEditor('USD');
+      // Save to Sheets in background
+      api('guardarLogos',{logos:logos}).catch(function(){});
     };
     reader.readAsDataURL(f);
     inp.value='';
