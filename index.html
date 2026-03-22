@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzlhdABibQrk3EANAnJ_uiBn1FBOZT33zzMuNwaEiFXUNWkuTUrpvSUEuCIUuGhQnSd/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -344,6 +344,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
     Abrir con Face ID
   </button>
   <button class="btn-test" onclick="testConexion()">Probar conexión con Sheets</button>
+  <button onclick="resetFaceId()" style="margin-top:6px;background:none;border:none;color:var(--hi);font-family:var(--f);font-size:12px;cursor:pointer;padding:8px;text-decoration:underline;">Entrar sin Face ID</button>
   <div id="diag"></div>
 </div>
 
@@ -615,10 +616,26 @@ function fp(o){const r={};Object.entries(o).forEach(([k,v])=>{r[k]=typeof v==='o
 async function doFaceId(){
   try{
     const cid=localStorage.getItem('credId');
-    if(cid){await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{id:b64b(cid),type:'public-key'}],userVerification:'required',timeout:60000}});}
-    else{const cr=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Mis Gastos',id:location.hostname},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'u',displayName:'Usuario'},pubKeyCredParams:[{type:'public-key',alg:-7}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});localStorage.setItem('credId',bb64(cr.rawId));}
-    afterAuth();
-  }catch(e){if(['NotSupportedError','SecurityError','InvalidStateError'].includes(e.name))afterAuth();else toast('Face ID cancelado');}
+    if(cid){
+      try{
+        await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{id:b64b(cid),type:'public-key'}],userVerification:'required',timeout:60000}});
+        afterAuth();return;
+      }catch(e2){
+        // Stored credential invalid - clear and re-register
+        localStorage.removeItem('credId');
+        doFaceId();return;
+      }
+    }
+    // No credential stored - create new one
+    try{
+      const cr=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Mis Gastos',id:location.hostname},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'u',displayName:'Usuario'},pubKeyCredParams:[{type:'public-key',alg:-7}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});
+      localStorage.setItem('credId',bb64(cr.rawId));
+      afterAuth();
+    }catch(e3){
+      // WebAuthn not supported or failed - open directly
+      afterAuth();
+    }
+  }catch(e){afterAuth();}
 }
 function bb64(b){return btoa(String.fromCharCode(...new Uint8Array(b)));}
 function b64b(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0)).buffer;}
@@ -630,6 +647,7 @@ async function testConexion(){
   catch(e){d.style.color='var(--rd)';d.textContent='✗ '+e.message+'\n\nVerificá:\n1. URL correcta\n2. Deploy → Anyone\n3. Permisos en Apps Script';}
 }
 async function afterAuth(){showScr('sa');await syncNow();}
+function resetFaceId(){localStorage.removeItem('credId');afterAuth();}
 function lockApp(){showScr('sl');}
 
 // ══ SYNC ══
