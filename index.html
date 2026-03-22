@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-ru8ByQNLbmlHSOqsuR-7CiKkL204aKqkKjjMZIYkaRGHumx0FNvMhM6tQJdupHmP/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -1163,42 +1163,41 @@ async function confirmReset(){
 // ══ CERRAR MES ══
 function showCierre(){
   const b=S.balance;
-  const ov=document.getElementById('cierre-ov');
   const logos=getLogos();
-  // Build per-account inputs
-  const ctaRows=mon=>{
-    const ctas=S.cuentas.filter(c=>c.moneda===mon);
-    const saldos=S.saldosCuentas||[];
-    return ctas.map(ct=>{
+  const saldos=S.saldosCuentas||[];
+  // Build rows for each currency
+  function ctaRows(mon){
+    return S.cuentas.filter(function(x){return x.moneda===mon;}).map(function(ct){
       const key=mon+'-'+ct.nombre;
-      const sc=saldos.find(s=>s.moneda===mon&&s.cuenta===ct.nombre);
+      const sc=saldos.find(function(s){return s.moneda===mon&&s.cuenta===ct.nombre;});
       const calc=sc?sc.saldo:0;
       const fmt=mon==='USD'?fU:fA;
+      const initials=ct.nombre.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
       const logoHtml=logos[key]
-        ?`<img src="${logos[key]}" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">`
-        :`<span style="font-size:10px;font-weight:700;color:var(--mu);">${ct.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`;
-      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</div>
-        <span style="flex:1;font-size:13px;color:var(--tx);">${ct.nombre}</span>
-        <span style="font-size:11px;color:var(--mu);margin-right:6px;">${fmt(calc)}</span>
-        <input type="text" inputmode="decimal"
-          id="cierre-${mon}-${ct.nombre.replace(/\s+/g,'_')}"
-          placeholder="Saldo real"
-          style="width:110px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:var(--fm);outline:none;text-align:right;">
-      </div>`;
+        ?'<img src="'+logos[key]+'" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">'
+        :'<span style="font-size:10px;font-weight:700;color:var(--mu);">'+initials+'</span>';
+      const safeId='cierre-'+mon+'-'+ct.nombre.replace(/\s+/g,'_');
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">'
+        +'<div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+logoHtml+'</div>'
+        +'<span style="flex:1;font-size:13px;color:var(--tx);">'+ct.nombre+'</span>'
+        +'<span style="font-size:11px;color:var(--mu);margin-right:6px;">'+fmt(calc)+'</span>'
+        +'<input type="text" inputmode="decimal" id="'+safeId+'" placeholder="Saldo real" '
+        +'style="width:110px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:var(--fm);outline:none;text-align:right;">'
+        +'</div>';
     }).join('');
-  };
-  ov.innerHTML=`<div class="csheet">
-    <div class="sh"></div>
-    <div class="mtitle">Cerrar mes</div>
-    <div class="msub">Ingresá el saldo real de cada cuenta</div>
-    <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Pesos ARS</div>
-    <div class="cfg-card" style="margin-bottom:14px;">${ctaRows('ARS')}</div>
-    <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Dólares USD</div>
-    <div class="cfg-card" style="margin-bottom:16px;">${ctaRows('USD')}</div>
-    <button class="btn-confirm buy" onclick="confirmCierre()">Cerrar y abrir mes nuevo</button>
-    <button class="btn-xs" onclick="document.getElementById('cierre-ov').classList.remove('show')">Cancelar</button>
-  </div>`;
+  }
+  const ov=document.getElementById('cierre-ov');
+  ov.innerHTML='<div class="csheet">'
+    +'<div class="sh"></div>'
+    +'<div class="mtitle">Cerrar mes</div>'
+    +'<div class="msub">Ingresá el saldo real de cada cuenta</div>'
+    +'<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Pesos ARS</div>'
+    +'<div class="cfg-card" style="margin-bottom:14px;">'+ctaRows('ARS')+'</div>'
+    +'<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Dólares USD</div>'
+    +'<div class="cfg-card" style="margin-bottom:16px;">'+ctaRows('USD')+'</div>'
+    +'<button class="btn-confirm buy" onclick="confirmCierre()">Cerrar y abrir mes nuevo</button>'
+    +'<button class="btn-xs" onclick="document.getElementById('cierre-ov').classList.remove('show')">Cancelar</button>'
+    +'</div>';
   ov.classList.add('show');
 }
 async function confirmCierre(){
