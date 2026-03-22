@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxiNkkxcAIfrd99JBzGEvd0n132tOThjs2XVzzk3LP7IDEYUMicWJuRm-qlUa8qdNFY/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -27,8 +27,7 @@ html,body{height:100%;overscroll-behavior:none;}
 body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .screen{display:none;flex-direction:column;height:100dvh;}
 .screen.active{display:flex;}
-.sb{height:64px;flex-shrink:0;}
-@supports(padding-top:env(safe-area-inset-top)){.sb{height:calc(max(env(safe-area-inset-top),20px) + 44px);}}
+.sb{height:calc(env(safe-area-inset-top,44px) + 16px);flex-shrink:0;}
 .topbar{padding:0 20px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 .tt{font-size:17px;font-weight:500;letter-spacing:-.02em;}
 .ta{font-size:14px;color:var(--go);font-weight:500;background:none;border:none;font-family:var(--f);cursor:pointer;padding:4px 0;}
@@ -37,19 +36,16 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .sdot.err{background:var(--rd);}
 .sdot.spin{background:var(--go);animation:pulse 1s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:118px;}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 70px);}
 .scroll::-webkit-scrollbar{display:none;}
-.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;align-items:flex-start;z-index:30;padding-top:10px;padding-bottom:34px;min-height:60px;}
-@supports(padding-bottom:env(safe-area-inset-bottom)){
-  .bnav{padding-bottom:max(env(safe-area-inset-bottom),34px);}
-}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;align-items:flex-start;z-index:30;padding-top:10px;padding-bottom:env(safe-area-inset-bottom,0px);}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;}
 .nl{font-size:10px;color:var(--hi);font-family:var(--f);}
 .nb.on .nl{color:var(--go);}
 .ni{width:22px;height:22px;color:var(--hi);}
 .nb.on .ni{color:var(--go);}
 /* LOCK */
-#sl{align-items:center;justify-content:center;padding:calc(var(--st)+20px) 24px 40px;gap:0;}
+#sl{align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,44px)+20px) 24px 40px;gap:0;}
 .lock-logo{width:72px;height:72px;border-radius:20px;background:var(--gobg);border:.5px solid rgba(232,213,176,.3);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 32px;}
 .lock-title{font-size:28px;font-weight:500;letter-spacing:-.04em;margin-bottom:8px;text-align:center;}
 .lock-sub{font-size:15px;color:var(--mu);text-align:center;line-height:1.5;margin-bottom:48px;padding:0 40px;}
@@ -450,7 +446,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       </div>
     </div>
     <!-- RECIENTES -->
-    <div id="add-panel-recientes" style="display:none;flex:1;overflow-y:auto;padding-bottom:118px;position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-recientes"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-recientes"></div><span id="ptr-txt-add-recientes">↓ Deslizá para actualizar</span></div>
+    <div id="add-panel-recientes" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 70px);position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-recientes"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-recientes"></div><span id="ptr-txt-add-recientes">↓ Deslizá para actualizar</span></div>
       <div style="padding:12px 16px 6px;font-size:11px;color:var(--hi);text-transform:uppercase;letter-spacing:.07em;">Últimos 7 días — deslizá para actualizar</div>
       <div id="recientes-list" style="padding:0 16px;"></div>
     </div>
@@ -845,6 +841,7 @@ async function loadRecientes(){
   const cont=document.getElementById('recientes-list');
   if(cont)cont.innerHTML='<div class="empty-state" style="color:var(--mu);">Cargando…</div>';
   try{
+    if(!S.ultimoMes){cont.innerHTML='<div class="empty-state">Sin sesión activa. Cerrá y reabrí la app.</div>';return;}
     // fetch current month
     const rows1=(await api('getMovimientos',{mes:S.ultimoMes})).rows||[];
     // also fetch previous month in case last 7 days straddle month boundary
@@ -865,6 +862,7 @@ async function loadRecientes(){
       const rd=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
       return rd>=cutoff;
     }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    if(cont)cont.innerHTML='<div class="empty-state" style="color:var(--mu);">'+recientesData.length+' movs encontrados…</div>';
     renderRecientes();
   }catch(e){
     if(cont)cont.innerHTML='<div class="empty-state">Error: '+e.message+'</div>';
@@ -875,7 +873,7 @@ function renderRecientes(){
   if(!cont)return;
   // check which are hidden (soft-deleted from view)
   const hidden=JSON.parse(localStorage.getItem('hidden_movs')||'[]');
-  const visible=recientesData.filter(r=>!hidden.includes(r.fecha+'_'+r.categoria+'_'+r.monto));
+  const visible=recientesData.filter(r=>!hidden.includes(mkKey(r)));
   if(!visible.length){cont.innerHTML='<div class="empty-state">Sin movimientos en los últimos 7 días.</div>';return;}
   cont.innerHTML=visible.map((r,i)=>{
     const isG=r.tipo==='Gasto'||r.tipo==='gasto';
@@ -892,22 +890,19 @@ function renderRecientes(){
       <div class="hist-amts">
         <div class="hist-to ${isG?'':'hto-buy'}" style="${isG?'color:var(--rd)':''}">${isG?'−':'+'} ${monto}</div>
       </div>
-      <button onclick="hideMovimiento('${key}',${i})" style="background:none;border:none;color:var(--rd);font-size:20px;padding:4px 4px 4px 10px;cursor:pointer;opacity:.6;">×</button>
+      <button onclick="hideMovimiento('${mkKey(r)}')" style="background:none;border:none;color:var(--rd);font-size:20px;padding:4px 4px 4px 10px;cursor:pointer;opacity:.6;">×</button>
     </div>`;
   }).join('');
 }
-function hideMovimiento(key,i){
-  // soft-delete: hides from list but keeps in Sheets calculations
+function mkKey(r){return r.fecha+'_'+r.categoria+'_'+String(parseFloat(r.monto)||0);}
+function hideMovimiento(key){
   const hidden=JSON.parse(localStorage.getItem('hidden_movs')||'[]');
   if(!hidden.includes(key))hidden.push(key);
-  localStorage.setItem('hidden_movs',JSON.stringify(hidden));
   // auto-expire: clean keys older than 8 days
   const now=new Date();
   const fresh=hidden.filter(k=>{
-    const datePart=k.split('_')[0];
-    if(!datePart)return false;
-    const d=new Date(datePart);
-    return(now-d)<8*24*60*60*1000;
+    const d=new Date(k.split('_')[0]);
+    return !isNaN(d)&&(now-d)<8*24*60*60*1000;
   });
   localStorage.setItem('hidden_movs',JSON.stringify(fresh));
   renderRecientes();
