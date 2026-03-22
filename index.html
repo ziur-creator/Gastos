@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxiNkkxcAIfrd99JBzGEvd0n132tOThjs2XVzzk3LP7IDEYUMicWJuRm-qlUa8qdNFY/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -843,7 +843,11 @@ async function loadRecientes(){
   try{
     if(!S.ultimoMes){cont.innerHTML='<div class="empty-state">Sin sesión activa. Cerrá y reabrí la app.</div>';return;}
     // fetch current month
-    const rows1=(await api('getMovimientos',{mes:S.ultimoMes})).rows||[];
+    const raw1=await api('getMovimientos',{mes:S.ultimoMes});
+    const rows1=raw1.rows||[];
+    // DEBUG: show raw data
+    if(cont)cont.innerHTML='<div class="empty-state" style="font-size:11px;color:var(--mu);text-align:left;padding:12px;">Mes: '+S.ultimoMes+'<br>Filas: '+rows1.length+'<br>'+(rows1[0]?'Primera: '+JSON.stringify(rows1[0]):'vacío')+'</div>';
+    await new Promise(r=>setTimeout(r,2000));// pause so user can read
     // also fetch previous month in case last 7 days straddle month boundary
     const MO2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const curIdx=MO2.findIndex(m=>S.ultimoMes.startsWith(m));
