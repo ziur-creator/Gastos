@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzy3MbiVgegHSNYOgiZqTLL-1bdNRjxrFNtgM6bPY8G_LDVOAZXS8ukPQV9vMbv_GwA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -62,7 +62,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 /* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;flex-direction:column;}
 .bnav-row{display:flex;align-items:center;height:49px;}
-.bnav-safe{height:var(--sb);}
+.bnav-safe{height:env(safe-area-inset-bottom,0px);}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
 .ni{width:22px;height:22px;color:var(--hi);}
 .nl{font-size:10px;color:var(--hi);font-family:var(--f);letter-spacing:.02em;}
@@ -1009,9 +1009,7 @@ let selEmojiTipo=null,selEmoji={gasto:'📌',ingreso:'📌'};
 function renderCatsEditor(tipo){
   const id='cfg-cats-'+tipo;
   const cats=S.categorias.filter(c=>c.tipo===tipo);
-  const emojiPicker=`<div id="epicker-${tipo}" style="display:none;flex-wrap:wrap;gap:4px;padding:8px 14px;border-top:.5px solid var(--bd);">
-    ${CAT_EMOJIS.map(e=>`<span onclick="pickEmoji('${tipo}','${e}')" style="font-size:22px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;border:.5px solid transparent;" class="eopt">${e}</span>`).join('')}
-  </div>`;
+  const emojiPicker='';
   document.getElementById(id).innerHTML=
     cats.map(c=>`<div class="cat-edit-row"><span class="cat-edit-ico" style="cursor:pointer;" onclick="changeEmoji('${tipo}','${c.nombre.replace(/'/g,"\\'")}')">${c.emoji}</span><span class="cat-edit-name">${c.nombre}</span><button class="cat-del-btn" onclick="delCat('${tipo}','${c.nombre.replace(/'/g,"\\'")}')">×</button></div>`).join('')+
     `<div class="cta-add-row">
@@ -1021,9 +1019,45 @@ function renderCatsEditor(tipo){
     </div>`+emojiPicker;
 }
 function toggleEmojiPicker(tipo){
-  selEmojiTipo=tipo;
-  const p=document.getElementById('epicker-'+tipo);
-  p.style.display=p.style.display==='none'?'flex':'none';
+  // Use native emoji keyboard via hidden input
+  let inp=document.getElementById('emoji-inp-'+tipo);
+  if(!inp){
+    inp=document.createElement('input');
+    inp.id='emoji-inp-'+tipo;
+    inp.type='text';
+    // iOS shows emoji keyboard when inputmode is none and user taps
+    // Better: use a regular text input positioned off-screen
+    inp.style.cssText='position:fixed;top:50%;left:50%;width:1px;height:1px;opacity:0;border:none;outline:none;background:transparent;font-size:30px;';
+    inp.setAttribute('inputmode','none');
+    inp.setAttribute('enterkeyhint','done');
+    document.body.appendChild(inp);
+    inp.addEventListener('input',e=>{
+      const val=e.target.value;
+      // extract first emoji character
+      const match=val.match(/\p{Emoji}/u);
+      if(match){
+        const emoji=match[0];
+        if(_changingEmoji&&_changingEmoji.tipo===tipo){
+          const cat=S.categorias.find(c=>c.tipo===tipo&&c.nombre===_changingEmoji.nombre);
+          if(cat){cat.emoji=emoji;saveCats();}
+          _changingEmoji=null;
+        } else {
+          selEmoji[tipo]=emoji;
+          const el=document.getElementById('new-ico-'+tipo);
+          if(el)el.textContent=emoji;
+        }
+        inp.value='';
+        renderCatsEditor(tipo);
+      }
+    });
+  }
+  inp.value='';
+  // Position near the tapped element so iOS keyboard appears nearby
+  inp.style.opacity='0.01';
+  inp.style.top='50%';
+  inp.focus();
+  // Trigger emoji keyboard on iOS by using a tap simulation
+  setTimeout(()=>{inp.style.opacity='0';},300);
 }
 function pickEmoji(tipo,emoji){
   if(selEmojiTipo===tipo&&!_changingEmoji){
@@ -1035,15 +1069,12 @@ function pickEmoji(tipo,emoji){
     if(cat){cat.emoji=emoji;saveCats();}
     _changingEmoji=null;
   }
-  document.getElementById('epicker-'+tipo).style.display='none';
   renderCatsEditor(tipo);
 }
 let _changingEmoji=null;
 function changeEmoji(tipo,nombre){
   _changingEmoji={tipo,nombre};
-  selEmojiTipo=tipo;
-  const p=document.getElementById('epicker-'+tipo);
-  p.style.display='flex';
+  toggleEmojiPicker(tipo);
 }
 function delCat(tipo,nombre){
   S.categorias=S.categorias.filter(c=>!(c.tipo===tipo&&c.nombre===nombre));
