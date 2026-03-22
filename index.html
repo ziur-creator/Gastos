@@ -58,9 +58,9 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .view.on{display:flex;}
 
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;flex-direction:column;}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);}
 .bnav-row{display:flex;align-items:center;height:49px;}
-.bnav-safe{height:env(safe-area-inset-bottom,0px);}
+.bnav-safe{display:none;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
 .ni{width:22px;height:22px;color:var(--hi);}
 .nl{font-size:10px;color:var(--hi);font-family:var(--f);letter-spacing:.02em;}
@@ -369,7 +369,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       <button id="tab-rec" class="topt" onclick="setAddTab('rec')">Recientes</button>
     </div>
     <!-- NUEVO -->
-    <div id="panel-nuevo" class="scroll">
+    <div id="panel-nuevo" class="scroll" ontouchstart="ptrStart(event,this)" ontouchmove="ptrMove(event,this)" ontouchend="ptrEnd(event,this)"><div class="ptr hidden"><div class="ptr-spin"></div>Actualizando…</div>
       <div class="add-wrap">
         <div class="tog2">
           <div class="type-tog"><button class="topt ag" id="opt-g" onclick="setAddType('gasto')">Gasto</button><button class="topt" id="opt-i" onclick="setAddType('ingreso')">Ingreso</button></div>
@@ -384,12 +384,12 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
         <div class="fl"><div class="flbl">Monto</div>
           <input class="finput" type="text" id="add-amt" placeholder="0" inputmode="decimal" style="font-size:28px;font-family:var(--fm);font-weight:500;">
         </div>
-        <div class="fl"><div class="flbl">Fecha</div><input class="finput" type="date" id="add-date" style="width:100%;text-align:left;"></div>
+        <div class="fl"><div class="flbl">Fecha</div><input class="finput" type="date" id="add-date" style="width:100%;text-align:left;-webkit-appearance:none;appearance:none;"></div>
         <button class="btn-p" id="add-btn" onclick="submitMov()">Registrar gasto</button>
       </div>
     </div>
     <!-- RECIENTES -->
-    <div id="panel-rec" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(--sb)+80px);">
+    <div id="panel-rec" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(--sb)+80px);" ontouchstart="ptrStart(event,this)" ontouchmove="ptrMove(event,this)" ontouchend="ptrEnd(event,this)"><div class="ptr hidden"><div class="ptr-spin"></div>Actualizando…</div>
       <div style="padding:12px 16px 6px;font-size:11px;color:var(--go);text-transform:uppercase;letter-spacing:.07em;">Últimos 7 días</div>
       <div id="rec-list" class="mov-list"></div>
     </div>
@@ -545,7 +545,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1bFjPSM3z9FRYSzm1YSyTs62s-0YA0ziHZgdAuigwZNoh4paAjzNExDgp3O1jTUFU/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -935,10 +935,8 @@ async function confirmConv(){
 async function loadStats(){
   try{
     const data=await api('getResumen',{anio:new Date().getFullYear()});
-    S.statsData=data;
-    toast('2026:'+(data.actual||[]).length+' 2025:'+(data.anterior||[]).length);
-    renderStats();
-  }catch(e){toast('Error stats:'+e.message);}
+    S.statsData=data;renderStats();
+  }catch(e){}
 }
 function setStatsCur(c){
   statsCur=c;
