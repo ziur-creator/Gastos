@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxiNkkxcAIfrd99JBzGEvd0n132tOThjs2XVzzk3LP7IDEYUMicWJuRm-qlUa8qdNFY/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -234,15 +234,18 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .emoji-picker.show{display:flex;}
 .emoji-opt{font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;border:.5px solid transparent;}
 .emoji-opt.sel{border-color:rgba(232,213,176,.4);background:var(--gobg);}
-.stats-tbl{border-collapse:collapse;font-size:11px;white-space:nowrap;width:100%;}
-.stats-tbl th{font-size:10px;color:var(--hi);font-weight:400;padding:4px 8px;text-align:right;border-bottom:.5px solid var(--bd);letter-spacing:.04em;}
-.stats-tbl th:first-child{text-align:left;}
-.stats-tbl td{padding:7px 6px;text-align:right;border-bottom:.5px solid rgba(255,255,255,.04);font-family:var(--fm);font-size:11px;color:var(--tx);max-width:80px;overflow:hidden;text-overflow:ellipsis;}
-.stats-tbl th{max-width:80px;overflow:hidden;text-overflow:ellipsis;}
-.stbl-mes{text-align:left;font-family:var(--f);color:var(--mu);font-size:11px;white-space:nowrap;min-width:28px;}
-.stbl-zero{color:var(--hi);}
-.stbl-tot{font-weight:500;color:var(--go);}
-.stbl-total td{border-top:.5px solid var(--bd2);font-weight:500;color:var(--go);padding-top:9px;}
+/* stats cat card */
+.scat-card{background:var(--s1);border-radius:12px;border:.5px solid var(--bd);overflow:hidden;margin-bottom:8px;}
+.scat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;}
+.scat-name{font-size:13px;font-weight:500;color:var(--tx);display:flex;align-items:center;gap:6px;}
+.scat-total{font-size:13px;font-family:var(--fm);color:var(--go);font-weight:500;}
+.scat-months{display:grid;grid-template-columns:repeat(6,1fr);gap:0;}
+.scat-cell{padding:5px 6px;text-align:center;border-top:.5px solid var(--bd);border-right:.5px solid var(--bd);}
+.scat-cell:nth-child(6n){border-right:none;}
+.scat-cell-mon{font-size:9px;color:var(--hi);margin-bottom:2px;text-transform:uppercase;}
+.scat-cell-val{font-size:10px;font-family:var(--fm);color:var(--tx);}
+.scat-cell-val.zero{color:var(--hi);}
+.scat-cell-val.pos{color:var(--gn);}
 /* CIERRE */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.82);display:none;align-items:flex-end;z-index:100;}
 .overlay.show{display:flex;}
@@ -613,7 +616,7 @@ function lockApp(){showScr('sl');}
 async function syncNow(){
   try{
     const cfg=await api('getConfig');
-    S.initARS=cfg.initARS;S.initUSD=cfg.initUSD;S.ultimoMes=cfg.ultimoMes;
+    S.initARS=cfg.initARS;S.initUSD=cfg.initUSD;S.ultimoMes=normalizeMes(cfg.ultimoMes);
     S.categorias=cfg.categorias;S.cuentas=cfg.cuentas;S.balance=cfg.balance;
     S.saldosCuentas=cfg.saldosCuentas||[];
     const cot=await api('getCotizacion');S.cotizaciones=cot;S.cotFecha=cot.fecha;
@@ -843,11 +846,7 @@ async function loadRecientes(){
   try{
     if(!S.ultimoMes){cont.innerHTML='<div class="empty-state">Sin sesión activa. Cerrá y reabrí la app.</div>';return;}
     // fetch current month
-    const raw1=await api('getMovimientos',{mes:S.ultimoMes});
-    const rows1=raw1.rows||[];
-    // DEBUG: show raw data
-    if(cont)cont.innerHTML='<div class="empty-state" style="font-size:11px;color:var(--mu);text-align:left;padding:12px;">Mes: '+S.ultimoMes+'<br>Filas: '+rows1.length+'<br>'+(rows1[0]?'Primera: '+JSON.stringify(rows1[0]):'vacío')+'</div>';
-    await new Promise(r=>setTimeout(r,2000));// pause so user can read
+    const rows1=(await api('getMovimientos',{mes:S.ultimoMes})).rows||[];
     // also fetch previous month in case last 7 days straddle month boundary
     const MO2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const curIdx=MO2.findIndex(m=>S.ultimoMes.startsWith(m));
@@ -1004,42 +1003,51 @@ function renderStats(){
     const k=h.tipo+'-'+h.categoria;histMap[k]=(histMap[k]||0)+h.monto;
   });
 
-  // ── GASTOS MENSUALES POR CATEGORÍA ──
+  // ── GASTOS MENSUALES POR CATEGORÍA (card per category) ──
   const cats_g=[...new Set(gC.map(r=>r.categoria))];
   const gByMesCat={};MOS.forEach(m=>{gByMesCat[m]={};});
   gC.forEach(r=>{if(gByMesCat[r.mes])gByMesCat[r.mes][r.categoria]=(gByMesCat[r.mes][r.categoria]||0)+r.monto;});
+  let totals_g={};cats_g.forEach(cat=>{totals_g[cat]=MOS.reduce((s,m)=>s+(gByMesCat[m][cat]||0),0);});
+  let grandG=Object.values(totals_g).reduce((a,b)=>a+b,0);
 
-  const abbr=s=>s.length>7?s.slice(0,6)+'…':s;
-  let tbl_g='<table class="stats-tbl"><thead><tr><th>Mes</th>'+cats_g.map(c=>`<th title="${c}">${abbr(c)}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
-  let totals_g={};cats_g.forEach(c=>{totals_g[c]=0;});let grandG=0;
-  MOS.forEach(m=>{
-    const row=gByMesCat[m]||{};
-    const rowTotal=cats_g.reduce((s,c)=>s+(row[c]||0),0);
-    if(!rowTotal)return;
-    grandG+=rowTotal;cats_g.forEach(cat=>{totals_g[cat]=(totals_g[cat]||0)+(row[cat]||0);});
-    tbl_g+=`<tr><td class="stbl-mes">${m}</td>`+cats_g.map(cat=>row[cat]?`<td>${fK(row[cat])}</td>`:'<td class="stbl-zero">—</td>').join('')+`<td class="stbl-tot">${fK(rowTotal)}</td></tr>`;
-  });
-  tbl_g+=`<tr class="stbl-total"><td>Total</td>`+cats_g.map(c=>`<td>${fK(totals_g[c]||0)}</td>`).join('')+`<td>${fK(grandG)}</td></tr>`;
-  tbl_g+='</tbody></table>';
-  document.getElementById('stats-tbl-gastos').innerHTML=tbl_g;
+  const renderCatCards=(cats,byMesCat,totals,isInc,containerId)=>{
+    if(!cats.length){document.getElementById(containerId).innerHTML='<div class="empty-state">Sin datos.</div>';return;}
+    const html=cats.sort((a,b)=>totals[b]-totals[a]).map(cat=>{
+      const ico=S.categorias.find(x=>x.nombre===cat)?.emoji||'📌';
+      const cells=MOS.map(m=>{
+        const v=byMesCat[m]?.[cat]||0;
+        // abbreviated value: K for thousands, M for millions
+        let disp='—';
+        if(v>0){
+          if(cur==='ARS'){
+            disp=v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+Math.round(v/1000)+'k':'$'+Math.round(v);
+          } else {
+            disp=v>=1000?'U$'+(v/1000).toFixed(1)+'k':'U$'+v.toFixed(0);
+          }
+        }
+        return`<div class="scat-cell"><div class="scat-cell-mon">${m}</div><div class="scat-cell-val${v===0?' zero':isInc?' pos':''}">${disp}</div></div>`;
+      }).join('');
+      return`<div class="scat-card">
+        <div class="scat-header">
+          <span class="scat-name">${ico} ${cat}</span>
+          <span class="scat-total">${fK(totals[cat])}</span>
+        </div>
+        <div class="scat-months">${cells}</div>
+      </div>`;
+    }).join('');
+    document.getElementById(containerId).innerHTML=html;
+  };
+
+  renderCatCards(cats_g,gByMesCat,totals_g,false,'stats-tbl-gastos');
 
   // ── INGRESOS MENSUALES POR CATEGORÍA ──
   const cats_i=[...new Set(iC.map(r=>r.categoria))];
   const iByMesCat={};MOS.forEach(m=>{iByMesCat[m]={};});
   iC.forEach(r=>{if(iByMesCat[r.mes])iByMesCat[r.mes][r.categoria]=(iByMesCat[r.mes][r.categoria]||0)+r.monto;});
+  let totals_i={};cats_i.forEach(cat=>{totals_i[cat]=MOS.reduce((s,m)=>s+(iByMesCat[m][cat]||0),0);});
+  let grandI=Object.values(totals_i).reduce((a,b)=>a+b,0);
 
-  let tbl_i='<table class="stats-tbl"><thead><tr><th>Mes</th>'+cats_i.map(c=>`<th title="${c}">${abbr(c)}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
-  let totals_i={};cats_i.forEach(c=>{totals_i[c]=0;});let grandI=0;
-  MOS.forEach(m=>{
-    const row=iByMesCat[m]||{};
-    const rowTotal=cats_i.reduce((s,c)=>s+(row[c]||0),0);
-    if(!rowTotal)return;
-    grandI+=rowTotal;cats_i.forEach(cat=>{totals_i[cat]=(totals_i[cat]||0)+(row[cat]||0);});
-    tbl_i+=`<tr><td class="stbl-mes">${m}</td>`+cats_i.map(cat=>row[cat]?`<td>${fK(row[cat])}</td>`:'<td class="stbl-zero">—</td>').join('')+`<td class="stbl-tot">${fK(rowTotal)}</td></tr>`;
-  });
-  tbl_i+=`<tr class="stbl-total"><td>Total</td>`+cats_i.map(c=>`<td>${fK(totals_i[c]||0)}</td>`).join('')+`<td>${fK(grandI)}</td></tr>`;
-  tbl_i+='</tbody></table>';
-  document.getElementById('stats-tbl-ingresos').innerHTML=tbl_i;
+  renderCatCards(cats_i,iByMesCat,totals_i,true,'stats-tbl-ingresos');
 
   // ── COMPARATIVA ANUAL POR CATEGORÍA ──
   const allCatsG=[...new Set([...Object.keys(totals_g),...hist.filter(h=>h.tipo==='Gasto'&&h.moneda===cur).map(h=>h.categoria)])];
@@ -1314,6 +1322,28 @@ function resetPTR(){
 }
 
 // ══ UTILS ══
+function normalizeMes(v){
+  if(!v)return '';
+  const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const s=String(v).trim();
+  // already correct "Mar2026"
+  if(/^[A-Za-z]{3}[0-9]{4}$/.test(s))return s;
+  // Sheets date "3/1/2026" or "1/3/2026" (M/D/YYYY)
+  const slashMatch=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(slashMatch){
+    // Sheets uses M/D/YYYY
+    const month=parseInt(slashMatch[1])-1;
+    const year=parseInt(slashMatch[3]);
+    return MO[month]+year;
+  }
+  // ISO "2026-03-01"
+  const isoMatch=s.match(/^(\d{4})-(\d{2})/);
+  if(isoMatch)return MO[parseInt(isoMatch[2])-1]+parseInt(isoMatch[1]);
+  // JS Date string "Sun Mar 01 2026..."
+  const d=new Date(s);
+  if(!isNaN(d))return MO[d.getMonth()]+d.getFullYear();
+  return s;
+}
 function parseNum(v){
   if(v===null||v===undefined||v==='')return 0;
   if(typeof v==='number')return v;
