@@ -545,7 +545,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1bFjPSM3z9FRYSzm1YSyTs62s-0YA0ziHZgdAuigwZNoh4paAjzNExDgp3O1jTUFU/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -1161,44 +1161,55 @@ async function confirmReset(){
 
 // ══ CERRAR MES ══
 function showCierre(){
-  const b=S.balance;
-  const logos=getLogos();
-  const saldos=S.saldosCuentas||[];
-  // Build rows for each currency
-  function ctaRows(mon){
-    return S.cuentas.filter(function(x){return x.moneda===mon;}).map(function(ct){
-      const key=mon+'-'+ct.nombre;
-      const sc=saldos.find(function(s){return s.moneda===mon&&s.cuenta===ct.nombre;});
-      const calc=sc?sc.saldo:0;
-      const fmt=mon==='USD'?fU:fA;
-      const initials=ct.nombre.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
-      const logoHtml=logos[key]
-        ?'<img src="'+logos[key]+'" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">'
-        :'<span style="font-size:10px;font-weight:700;color:var(--mu);">'+initials+'</span>';
-      const safeId='cierre-'+mon+'-'+ct.nombre.replace(/\s+/g,'_');
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">'
-        +'<div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+logoHtml+'</div>'
-        +'<span style="flex:1;font-size:13px;color:var(--tx);">'+ct.nombre+'</span>'
-        +'<span style="font-size:11px;color:var(--mu);margin-right:6px;">'+fmt(calc)+'</span>'
-        +'<input type="text" inputmode="decimal" id="'+safeId+'" placeholder="Saldo real" '
-        +'style="width:110px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:var(--fm);outline:none;text-align:right;">'
-        +'</div>';
-    }).join('');
-  }
-  const ov=document.getElementById('cierre-ov');
-  ov.innerHTML='<div class="csheet">'
-    +'<div class="sh"></div>'
-    +'<div class="mtitle">Cerrar mes</div>'
-    +'<div class="msub">Ingresá el saldo real de cada cuenta</div>'
-    +'<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Pesos ARS</div>'
-    +'<div class="cfg-card" style="margin-bottom:14px;">'+ctaRows('ARS')+'</div>'
-    +'<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Dólares USD</div>'
-    +'<div class="cfg-card" style="margin-bottom:16px;">'+ctaRows('USD')+'</div>'
-    +'<button class="btn-confirm buy" onclick="confirmCierre()">Cerrar y abrir mes nuevo</button>'
-    +'<button class="btn-xs" onclick="document.getElementById(\'cierre-ov\').classList.remove(\'show\')">Cancelar</button>'
-    +'</div>';
+  var b=S.balance;
+  var logos=getLogos();
+  var saldos=S.saldosCuentas||[];
+  var html='<div class="csheet"><div class="sh"></div>';
+  html+='<div class="mtitle">Cerrar mes</div>';
+  html+='<div class="msub">Ingresá el saldo real de cada cuenta</div>';
+  html+='<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Pesos ARS</div>';
+  html+='<div class="cfg-card" style="margin-bottom:14px;">';
+  S.cuentas.filter(function(x){return x.moneda==='ARS';}).forEach(function(ct){
+    var key='ARS-'+ct.nombre;
+    var sc=saldos.find(function(s){return s.moneda==='ARS'&&s.cuenta===ct.nombre;});
+    var calc=sc?sc.saldo:0;
+    var inits=ct.nombre.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var logoHtml=logos[key]?('<img src="'+logos[key]+'" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">'):('<span style="font-size:10px;font-weight:700;color:var(--mu);">'+inits+'</span>');
+    var sid='cierre-ARS-'+ct.nombre.replace(/\s+/g,'_');
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">';
+    html+='<div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+logoHtml+'</div>';
+    html+='<span style="flex:1;font-size:13px;color:var(--tx);">'+ct.nombre+'</span>';
+    html+='<span style="font-size:11px;color:var(--mu);margin-right:6px;">'+fA(calc)+'</span>';
+    html+='<input type="text" inputmode="decimal" id="'+sid+'" placeholder="Saldo real" style="width:100px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;outline:none;text-align:right;">';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Dólares USD</div>';
+  html+='<div class="cfg-card" style="margin-bottom:16px;">';
+  S.cuentas.filter(function(x){return x.moneda==='USD';}).forEach(function(ct){
+    var key='USD-'+ct.nombre;
+    var sc=saldos.find(function(s){return s.moneda==='USD'&&s.cuenta===ct.nombre;});
+    var calc=sc?sc.saldo:0;
+    var inits=ct.nombre.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var logoHtml=logos[key]?('<img src="'+logos[key]+'" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">'):('<span style="font-size:10px;font-weight:700;color:var(--mu);">'+inits+'</span>');
+    var sid='cierre-USD-'+ct.nombre.replace(/\s+/g,'_');
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">';
+    html+='<div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+logoHtml+'</div>';
+    html+='<span style="flex:1;font-size:13px;color:var(--tx);">'+ct.nombre+'</span>';
+    html+='<span style="font-size:11px;color:var(--mu);margin-right:6px;">'+fU(calc)+'</span>';
+    html+='<input type="text" inputmode="decimal" id="'+sid+'" placeholder="Saldo real" style="width:100px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;outline:none;text-align:right;">';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<button class="btn-confirm buy" onclick="confirmCierre()">Cerrar y abrir mes nuevo</button>';
+  html+='<button class="btn-xs" onclick="closeCierre()">Cancelar</button>';
+  html+='</div>';
+  var ov=document.getElementById('cierre-ov');
+  ov.innerHTML=html;
   ov.classList.add('show');
 }
+function closeCierre(){document.getElementById('cierre-ov').classList.remove('show');}
+
 async function confirmCierre(){
   const cuentasARS=S.cuentas.filter(x=>x.moneda==='ARS');
   const cuentasUSD=S.cuentas.filter(x=>x.moneda==='USD');
@@ -1223,8 +1234,7 @@ async function confirmCierre(){
     await api('cerrarMes',{arsReal,usdReal,calcARS:S.balance.balARS,calcUSD:S.balance.balUSD,mesNuevo,saldosReales});
     document.getElementById('cierre-ov').classList.remove('show');
     hideLoading();await syncNow();
-    showSuc('🗓','¡Mes cerrado!','Ajuste registrado.
-Nuevo mes iniciado.');
+    showSuc('🗓','¡Mes cerrado!','Ajuste registrado. Nuevo mes iniciado.');
   }catch(e){hideLoading();}
 }
 
