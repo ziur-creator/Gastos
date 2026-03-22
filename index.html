@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeK5a00bnNjxQDCOhWUBczfensUCXq8lMavpylV1KARWHiX0pqs4OO_mfM0AoacsZ-/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -482,12 +482,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
           <div class="cfg-row" style="cursor:pointer;" onclick="syncNow()"><span class="cfg-key">Sincronizar desde Sheets</span><span class="cfg-val">↓</span></div>
         </div>
       </div>
-      <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Saldo inicial del mes</div>
-        <div class="cfg-card">
-          <div class="cfg-row" style="padding:0;"><input class="cfg-input" id="cfg-init-ars" type="text" placeholder="Pesos ARS (suma de cuentas)" inputmode="decimal" onchange="saveConfig()"/></div>
-          <div class="cfg-row" style="padding:0;border-top:.5px solid var(--bd);"><input class="cfg-input" id="cfg-init-usd" type="text" placeholder="Dólares USD (suma de cuentas)" inputmode="decimal" onchange="saveConfig()"/></div>
-        </div>
-      </div>
+
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Cuentas ARS</div><div class="cfg-card" id="cfg-ctas-ars"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Cuentas USD</div><div class="cfg-card" id="cfg-ctas-usd"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Categorías de gastos</div><div class="cfg-card" id="cat-card-gasto"></div></div>
@@ -929,16 +924,11 @@ async function syncHistorico(){
   }catch(e){toast('Error al sincronizar histórico');}
 }
 function renderConfig(){
-  document.getElementById('cfg-init-ars').value=S.initARS||'';
-  document.getElementById('cfg-init-usd').value=S.initUSD||'';
+
   renderCuentasEditor('ARS');renderCuentasEditor('USD');
   renderCatDragEditor('gasto');renderCatDragEditor('ingreso');
 }
-async function saveConfig(){
-  const a=parseNum(document.getElementById('cfg-init-ars').value),u=parseNum(document.getElementById('cfg-init-usd').value);
-  S.initARS=a;S.initUSD=u;
-  try{await api('guardarConfig',{initARS:a,initUSD:u});toast('Saldo inicial guardado');}catch(e){}
-}
+
 
 // Cuentas editor con logos PNG
 function renderCuentasEditor(moneda){
