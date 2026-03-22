@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwr3rCcF4ArEPJk-j6GCpeVKv-Klx3nqZJpiqfcEaHmCSJd9Wui2Q8AgNfZmsJ-yQ1B/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -320,6 +320,10 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .suc-sub{font-size:13px;color:var(--mu);text-align:center;line-height:1.6;padding:0 32px;}
 .rec-row-hide{animation:fadeOut .3s forwards;}
 @keyframes fadeOut{to{opacity:0;height:0;padding:0;overflow:hidden;}}
+.loading-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,15,15,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:600;backdrop-filter:blur(4px);}
+.loading-ov.show{display:flex;}
+.loading-spin{width:36px;height:36px;border:3px solid rgba(232,213,176,.2);border-top-color:var(--go);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-txt{font-size:14px;color:var(--go);font-weight:500;}
 /* PULL TO REFRESH */
 .ptr-indicator{position:absolute;top:-48px;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:13px;gap:8px;pointer-events:none;transition:opacity .2s;}
 .ptr-spinner{width:18px;height:18px;border:2px solid var(--bd);border-top-color:var(--go);border-radius:50%;animation:spin .7s linear infinite;}
@@ -574,6 +578,10 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
     <button class="btn-xs" onclick="cancelDelete()">Cancelar</button>
   </div>
 </div>
+<div class="loading-ov" id="loading-ov">
+  <div class="loading-spin"></div>
+  <div class="loading-txt" id="loading-txt">Guardando…</div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="suc-ov" id="suc"><div class="suc-ico" id="suc-ico">✅</div><div class="suc-title" id="suc-title">—</div><div class="suc-sub" id="suc-sub">—</div></div>
 
@@ -629,7 +637,11 @@ async function syncNow(){
   try{
     const cfg=await api('getConfig');
     S.initARS=cfg.initARS;S.initUSD=cfg.initUSD;S.ultimoMes=normalizeMes(cfg.ultimoMes);
-    S.categorias=cfg.categorias;S.cuentas=cfg.cuentas;S.balance=cfg.balance;
+    S.categorias=cfg.categorias;
+    // deduplicate cuentas (Sheets may have duplicate rows)
+    const seenC=new Set();
+    S.cuentas=(cfg.cuentas||[]).filter(x=>{const k=x.moneda+'-'+x.nombre;if(seenC.has(k))return false;seenC.add(k);return true;});
+    S.balance=cfg.balance;
     S.saldosCuentas=cfg.saldosCuentas||[];
     const cot=await api('getCotizacion');S.cotizaciones=cot;S.cotFecha=cot.fecha;
     try{const h=await api('getHistorico');S.historico=h||[];}catch(e){S.historico=[];}
@@ -849,7 +861,6 @@ function clearAdd(){
   document.getElementById('add-date').value=todayISO();
   const sel=document.getElementById('add-cats-select');if(sel)sel.value='';
   setAddType('gasto');setAddCur('ARS');
-  const btn3=document.getElementById('add-btn');if(btn3)btn3.disabled=false;
 }
 // ── RECIENTES ──
 let recientesData=[];
@@ -950,16 +961,8 @@ async function confirmDelete(){
     else{if(isARS)S.balance.inARS-=r.monto;else S.balance.inUSD-=r.monto;}
     S.balance.balARS=S.balance.inARS-S.balance.outARS;
     S.balance.balUSD=S.balance.inUSD-S.balance.outUSD;
-    // update saldosCuentas locally
-    if(r.cuenta){
-      const sc=S.saldosCuentas.find(x=>x.moneda===r.moneda&&x.cuenta===r.cuenta);
-      if(sc){
-        const isG=r.tipo==='Gasto'||r.tipo==='gasto';
-        if(isG){sc.gastos=Math.max(0,(sc.gastos||0)-r.monto);}
-        else{sc.ingresos=Math.max(0,(sc.ingresos||0)-r.monto);}
-        sc.saldo=(sc.saldoInicial||0)+(sc.ingresos||0)-(sc.gastos||0);
-      }
-    }
+    // refresh saldosCuentas from Sheets
+    try{const cfg3=await api('getConfig');S.saldosCuentas=cfg3.saldosCuentas||[];}catch(e3){}
     recientesData.splice(idx,1);
     renderRecientes();
     renderHome();
@@ -987,34 +990,18 @@ function hideMovimiento(key){
 async function submitMov(){
   const amt=parseNum(document.getElementById('add-amount').value),fecha=document.getElementById('add-date').value||todayISO();
   if(!selCat){toast('Elegí una categoría');return;}if(!amt||amt<=0){toast('Ingresá un monto válido');return;}
-  // show loading state on button
-  const btn=document.getElementById('add-btn');
-  const btnOrig=btn.textContent;
-  btn.textContent='Guardando…';btn.disabled=true;
+  showLoading('Guardando '+addType+'…');
   try{
     await api('addMovimiento',{fecha,tipo:addType,categoria:selCat,monto:amt,moneda:addCur,cuenta:selCuenta||''});
     if(addType==='gasto'){if(addCur==='ARS')S.balance.outARS+=amt;else S.balance.outUSD+=amt;}
     else{if(addCur==='ARS')S.balance.inARS+=amt;else S.balance.inUSD+=amt;}
     S.balance.balARS=S.balance.inARS-S.balance.outARS;S.balance.balUSD=S.balance.inUSD-S.balance.outUSD;
-    // update saldosCuentas locally for immediate display
-    if(selCuenta){
-      const sc=S.saldosCuentas.find(x=>x.moneda===addCur&&x.cuenta===selCuenta);
-      if(sc){
-        if(addType==='gasto'){sc.gastos=(sc.gastos||0)+amt;}
-        else{sc.ingresos=(sc.ingresos||0)+amt;}
-        sc.saldo=(sc.saldoInicial||0)+(sc.ingresos||0)-(sc.gastos||0);
-      } else {
-        S.saldosCuentas.push({mes:S.ultimoMes,moneda:addCur,cuenta:selCuenta,
-          saldoInicial:0,ingresos:addType==='ingreso'?amt:0,
-          gastos:addType==='gasto'?amt:0,
-          saldo:addType==='ingreso'?amt:-amt});
-      }
-    }
-    clearAdd();goView('home');recientesData=[];
+    // refresh saldosCuentas from Sheets
+    try{const cfg2=await api('getConfig');S.saldosCuentas=cfg2.saldosCuentas||[];}catch(e2){}
+    hideLoading();clearAdd();goView('home');recientesData=[];
     showSuc('✅',addType==='gasto'?'Gasto registrado':'Ingreso registrado',selCat+' · '+(addCur==='ARS'?fA(amt):fU(amt)));
   }catch(e){
-    const btn2=document.getElementById('add-btn');
-    if(btn2){btn2.textContent=addType==='gasto'?'Registrar gasto':'Registrar ingreso';btn2.disabled=false;}
+    hideLoading();
     toast('Error: '+e.message);
   }
 }
@@ -1418,8 +1405,10 @@ async function ptrTouchEnd(e){
   setSS('spin');
   try{
     const cfg=await api('getConfig');
+    const seenC2=new Set();
+    const cuentasDedup=(cfg.cuentas||[]).filter(x=>{const k=x.moneda+'-'+x.nombre;if(seenC2.has(k))return false;seenC2.add(k);return true;});
     Object.assign(S,{initARS:cfg.initARS,initUSD:cfg.initUSD,ultimoMes:cfg.ultimoMes,
-      categorias:cfg.categorias,cuentas:cfg.cuentas,balance:cfg.balance,saldosCuentas:cfg.saldosCuentas||[]});
+      categorias:cfg.categorias,cuentas:cuentasDedup,balance:cfg.balance,saldosCuentas:cfg.saldosCuentas||[]});
     const cot=await api('getCotizacion');S.cotizaciones=cot;S.cotFecha=cot.fecha;
     try{const h=await api('getHistorico');S.historico=h||[];}catch(e2){}
     try{const lg=await api('getLogos');if(lg&&Object.keys(lg).length){Object.assign(logos,lg);localStorage.setItem('logos',JSON.stringify(logos));}}catch(e2){}
@@ -1463,6 +1452,13 @@ function normalizeMes(v){
   const d=new Date(s);
   if(!isNaN(d))return MO[d.getMonth()]+d.getFullYear();
   return s;
+}
+function showLoading(msg){
+  document.getElementById('loading-txt').textContent=msg||'Guardando…';
+  document.getElementById('loading-ov').classList.add('show');
+}
+function hideLoading(){
+  document.getElementById('loading-ov').classList.remove('show');
 }
 function parseNum(v){
   if(v===null||v===undefined||v==='')return 0;
