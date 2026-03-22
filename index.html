@@ -10,8 +10,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyrNrnZ0hQ35U4VZPWVeEdIJpC19bwih_1CTGCZ2MvrYq6DGH1icNLHx60fWISNZ-BR/exec';</script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
+
 <style>
 :root{
   --bg:#0f0f0f;--s1:#1a1a1a;--s2:#242424;--s3:#2e2e2e;
@@ -21,7 +21,7 @@
   --rd:#f87171;--rbg:rgba(248,113,113,.12);
   --go:#e8d5b0;--gobg:rgba(232,213,176,.10);
   --bl:rgba(74,144,226,.85);--blbg:rgba(74,144,226,.12);
-  --f:'DM Sans',system-ui,sans-serif;--fm:'DM Mono',monospace;
+  --f:-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif,system-ui,sans-serif;--fm:'SF Mono', monospace,monospace;
   --st:env(safe-area-inset-top,47px);--sb:env(safe-area-inset-bottom,34px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -40,7 +40,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 60px);}
 .scroll::-webkit-scrollbar{display:none;}
-.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);z-index:30;display:flex;flex-direction:column;}
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);z-index:30;display:flex;flex-direction:column;}
 .bnav-inner{display:flex;align-items:center;justify-content:space-around;height:49px;width:100%;}
 .bnav-safe{height:env(safe-area-inset-bottom,0px);}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
@@ -679,7 +679,12 @@ async function syncNow(){
 }
 
 // ══ NAV ══
-function showScr(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showScr(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const bnav=document.querySelector('.bnav');
+  if(bnav)bnav.style.display=id==='sa'?'':'none';
+}
 function goView(v){
   ['home','add','dolar','stats','config'].forEach(n=>document.getElementById('v-'+n).style.display='none');
   document.getElementById('v-'+v).style.display='flex';
