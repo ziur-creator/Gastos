@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzomNL4Ia97yLxw6s6Q3n7_qqx9L7iE-5QQRRdUex1W0DNOSaccYWzjGjYXoOQAG2E9/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -393,7 +393,6 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
           Ingreso
         </button>
       </div>
-      <div id="home-debug" style="display:none;margin:0 16px 10px;padding:10px;background:#1a1a1a;border-radius:10px;font-size:10px;color:rgba(240,237,232,.5);word-break:break-all;white-space:pre-wrap;line-height:1.5;"></div>
       <button class="cerrar-btn" onclick="showCierre()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2"/><rect x="8" y="2" width="8" height="6" rx="1"/></svg>
         Cerrar mes
@@ -729,15 +728,7 @@ function renderHome(){
   const scMap={};(S.saldosCuentas||[]).forEach(s=>{scMap[(s.moneda+'-'+s.cuenta).trim().toLowerCase()]=s;});
   const scKey=(m,n)=>(m+'-'+n).trim().toLowerCase();
   // DEBUG visible
-  const _dbg=document.getElementById('home-debug');
-  if(_dbg){
-    const saldoInfo=(S.saldosCuentas||[]).length===0?'VACÍO':(S.saldosCuentas||[]).map(s=>s.cuenta+':'+s.saldo).join(' | ');
-    const ctaInfo=S.cuentas.slice(0,4).map(x=>x.moneda+'-'+x.nombre).join(', ');
-    const mapInfo=Object.keys(scMap).join(', ')||'(vacío)';
-    const mesBal=S.ultimoMes||'(sin mes)';
-    _dbg.innerHTML='<b>Mes:</b> '+mesBal+'<br><b>SC('+((S.saldosCuentas||[]).length)+'):</b> '+saldoInfo+'<br><b>Ctas:</b> '+ctaInfo+'<br><b>Keys:</b> '+mapInfo;
-    _dbg.style.display='block';
-  }
+
   document.getElementById('det-ars').innerHTML=ctaA.map(c=>{const sc=scMap[scKey('ARS',c.nombre)];const sal=sc?sc.saldo:null;return`<div class="bcd-row"><div class="bcd-left"><div class="bcd-logo">${getLogoHTML('ARS',c.nombre,28)}</div></div><span class="bcd-v" title="${c.nombre}">${sal!==null?fA(sal):'—'}</span></div>`;}).join('');
   document.getElementById('det-usd').innerHTML=ctaU.map(c=>{const sc=scMap[scKey('USD',c.nombre)];const sal=sc?sc.saldo:null;return`<div class="bcd-row"><div class="bcd-left"><div class="bcd-logo">${getLogoHTML('USD',c.nombre,28)}</div></div><span class="bcd-v" title="${c.nombre}">${sal!==null?fU(sal):'—'}</span></div>`;}).join('');
   if(cot.compra>0){const pat=b.balUSD+b.balARS/cot.compra;document.getElementById('h-pat').textContent=fU(pat);document.getElementById('h-pat-note').textContent=fA(b.balARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(b.balUSD);}
