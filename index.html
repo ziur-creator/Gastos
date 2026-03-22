@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzy3MbiVgegHSNYOgiZqTLL-1bdNRjxrFNtgM6bPY8G_LDVOAZXS8ukPQV9vMbv_GwA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -724,7 +724,14 @@ function renderCats(){
 function selCatFn(v){selCat=v||null;}
 function renderCuentas(){
   const ctas=S.cuentas.filter(c=>c.moneda===addCur);
-  document.getElementById('add-cuentas').innerHTML=ctas.map(c=>`<div class="chip${selCuenta===c.nombre?' sel':''}" onclick="selCuentaFn('${c.nombre.replace(/'/g,"\\'")}')"><span class="chi">💳</span><span>${c.nombre}</span></div>`).join('');
+  const logos=getLogos();
+  document.getElementById('add-cuentas').innerHTML=ctas.map(c=>{
+    const key=addCur+'-'+c.nombre;
+    const logoHtml=logos[key]
+      ?`<img src="${logos[key]}" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block;">`
+      :`<span style="font-size:11px;font-weight:600;">${c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`;
+    return`<div class="chip${selCuenta===c.nombre?' sel':''}" onclick="selCuentaFn('${c.nombre.replace(/'/g,"\\'")}')"><span class="chi" style="width:28px;height:28px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</span><span style="font-size:11px;">${c.nombre}</span></div>`;
+  }).join('');
 }
 function selCuentaFn(n){selCuenta=n;renderCuentas();}
 function clearAdd(){
