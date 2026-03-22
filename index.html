@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxUTauwfOElImA9LMWgKujuI4X9lu0QOWpr88P7psUhi5D2KIKbRUp8DdwaOQ8xgnk/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -564,6 +564,16 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
   </div>
 </div>
 <input type="file" accept="image/*" class="file-inp" id="logo-file-inp" onchange="handleLogoUpload(event)">
+<div class="modal-ov" id="del-modal">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtitle">Eliminar movimiento</div>
+    <div class="msub" id="del-modal-desc">—</div>
+    <div class="mdetail"><div class="mdr"><span class="mdl" style="color:var(--rd);">⚠ Borra la fila de Google Sheets permanentemente.</span></div></div>
+    <button onclick="confirmDelete()" style="width:100%;padding:13px;border-radius:12px;background:var(--rd);color:#fff;border:none;font-family:var(--f);font-size:15px;font-weight:500;cursor:pointer;margin-bottom:8px;">Sí, eliminar</button>
+    <button class="btn-xs" onclick="cancelDelete()">Cancelar</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="suc-ov" id="suc"><div class="suc-ico" id="suc-ico">✅</div><div class="suc-title" id="suc-title">—</div><div class="suc-sub" id="suc-sub">—</div></div>
 
@@ -939,6 +949,16 @@ async function confirmDelete(){
     else{if(isARS)S.balance.inARS-=r.monto;else S.balance.inUSD-=r.monto;}
     S.balance.balARS=S.balance.inARS-S.balance.outARS;
     S.balance.balUSD=S.balance.inUSD-S.balance.outUSD;
+    // update saldosCuentas locally
+    if(r.cuenta){
+      const sc=S.saldosCuentas.find(x=>x.moneda===r.moneda&&x.cuenta===r.cuenta);
+      if(sc){
+        const isG=r.tipo==='Gasto'||r.tipo==='gasto';
+        if(isG){sc.gastos=Math.max(0,(sc.gastos||0)-r.monto);}
+        else{sc.ingresos=Math.max(0,(sc.ingresos||0)-r.monto);}
+        sc.saldo=(sc.saldoInicial||0)+(sc.ingresos||0)-(sc.gastos||0);
+      }
+    }
     recientesData.splice(idx,1);
     renderRecientes();
     renderHome();
@@ -971,7 +991,21 @@ async function submitMov(){
     if(addType==='gasto'){if(addCur==='ARS')S.balance.outARS+=amt;else S.balance.outUSD+=amt;}
     else{if(addCur==='ARS')S.balance.inARS+=amt;else S.balance.inUSD+=amt;}
     S.balance.balARS=S.balance.inARS-S.balance.outARS;S.balance.balUSD=S.balance.inUSD-S.balance.outUSD;
-    clearAdd();goView('home');recientesData=[];// reset so next time reloads
+    // update saldosCuentas locally for immediate display
+    if(selCuenta){
+      const sc=S.saldosCuentas.find(x=>x.moneda===addCur&&x.cuenta===selCuenta);
+      if(sc){
+        if(addType==='gasto'){sc.gastos=(sc.gastos||0)+amt;}
+        else{sc.ingresos=(sc.ingresos||0)+amt;}
+        sc.saldo=(sc.saldoInicial||0)+(sc.ingresos||0)-(sc.gastos||0);
+      } else {
+        S.saldosCuentas.push({mes:S.ultimoMes,moneda:addCur,cuenta:selCuenta,
+          saldoInicial:0,ingresos:addType==='ingreso'?amt:0,
+          gastos:addType==='gasto'?amt:0,
+          saldo:addType==='ingreso'?amt:-amt});
+      }
+    }
+    clearAdd();goView('home');recientesData=[];
     showSuc('✅',addType==='gasto'?'Gasto registrado':'Ingreso registrado',selCat+' · '+(addCur==='ARS'?fA(amt):fU(amt)));
   }catch(e){}
 }
