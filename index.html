@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUSKMBBL7JW9y18tkryiuXVlExHBOlUewUJVitwrIFijXuAmTlnJvYNW10kBr9O8lY/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -1164,37 +1164,69 @@ async function confirmReset(){
 function showCierre(){
   const b=S.balance;
   const ov=document.getElementById('cierre-ov');
+  const logos=getLogos();
+  // Build per-account inputs
+  const ctaRows=mon=>{
+    const ctas=S.cuentas.filter(c=>c.moneda===mon);
+    const saldos=S.saldosCuentas||[];
+    return ctas.map(ct=>{
+      const key=mon+'-'+ct.nombre;
+      const sc=saldos.find(s=>s.moneda===mon&&s.cuenta===ct.nombre);
+      const calc=sc?sc.saldo:0;
+      const fmt=mon==='USD'?fU:fA;
+      const logoHtml=logos[key]
+        ?`<img src="${logos[key]}" style="width:26px;height:26px;object-fit:cover;border-radius:50%;">`
+        :`<span style="font-size:10px;font-weight:700;color:var(--mu);">${ct.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--bd);">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</div>
+        <span style="flex:1;font-size:13px;color:var(--tx);">${ct.nombre}</span>
+        <span style="font-size:11px;color:var(--mu);margin-right:6px;">${fmt(calc)}</span>
+        <input type="text" inputmode="decimal"
+          id="cierre-${mon}-${ct.nombre.replace(/\s+/g,'_')}"
+          placeholder="Saldo real"
+          style="width:110px;background:var(--s2);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:var(--fm);outline:none;text-align:right;">
+      </div>`;
+    }).join('');
+  };
   ov.innerHTML=`<div class="csheet">
     <div class="sh"></div>
     <div class="mtitle">Cerrar mes</div>
     <div class="msub">Ingresá el saldo real de cada cuenta</div>
-    <div style="margin-bottom:14px;">
-      <div class="cfg-card">
-        <div class="cfg-row"><span class="cfg-key">Balance calculado ARS</span><span class="cfg-val">${fA(b.balARS)}</span></div>
-        <div class="cfg-row"><span class="cfg-key">Balance calculado USD</span><span class="cfg-val">${fU(b.balUSD)}</span></div>
-      </div>
-    </div>
-    <div class="fl" style="margin-bottom:10px;"><div class="flbl">Saldo real ARS</div><input class="finput" type="text" id="cierre-ars" inputmode="decimal" placeholder="${fA(b.balARS)}"></div>
-    <div class="fl" style="margin-bottom:14px;"><div class="flbl">Saldo real USD</div><input class="finput" type="text" id="cierre-usd" inputmode="decimal" placeholder="${fU(b.balUSD)}"></div>
+    <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Pesos ARS</div>
+    <div class="cfg-card" style="margin-bottom:14px;">${ctaRows('ARS')}</div>
+    <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px;">Dólares USD</div>
+    <div class="cfg-card" style="margin-bottom:16px;">${ctaRows('USD')}</div>
     <button class="btn-confirm buy" onclick="confirmCierre()">Cerrar y abrir mes nuevo</button>
     <button class="btn-xs" onclick="document.getElementById('cierre-ov').classList.remove('show')">Cancelar</button>
   </div>`;
   ov.classList.add('show');
 }
 async function confirmCierre(){
-  const arsVal=document.getElementById('cierre-ars').value;
-  const usdVal=document.getElementById('cierre-usd').value;
-  const arsReal=arsVal?parseNum(arsVal):S.balance.balARS;
-  const usdReal=usdVal?parseNum(usdVal):S.balance.balUSD;
+  const cuentasARS=S.cuentas.filter(x=>x.moneda==='ARS');
+  const cuentasUSD=S.cuentas.filter(x=>x.moneda==='USD');
+  // sum per-account inputs for totals
+  const sumCtas=(mon,ctas)=>ctas.reduce((s,ct)=>{
+    const inp=document.getElementById('cierre-'+mon+'-'+ct.nombre.replace(/\s+/g,'_'));
+    return s+(inp&&inp.value?parseNum(inp.value):0);
+  },0);
+  const arsTotal=sumCtas('ARS',cuentasARS);
+  const usdTotal=sumCtas('USD',cuentasUSD);
+  const arsReal=arsTotal||S.balance.balARS;
+  const usdReal=usdTotal||S.balance.balUSD;
+  const saldosReales=[...cuentasARS,...cuentasUSD].map(ct=>{
+    const inp=document.getElementById('cierre-'+ct.moneda+'-'+ct.nombre.replace(/\s+/g,'_'));
+    const val=inp&&inp.value?parseNum(inp.value):null;
+    return val!=null?{moneda:ct.moneda,cuenta:ct.nombre,saldo:val}:null;
+  }).filter(Boolean);
   const now=new Date();
   const mesNuevo=MO[now.getMonth()]+now.getFullYear();
   showLoading('Cerrando mes…');
   try{
-    await api('cerrarMes',{arsReal,usdReal,calcARS:S.balance.balARS,calcUSD:S.balance.balUSD,mesNuevo});
+    await api('cerrarMes',{arsReal,usdReal,calcARS:S.balance.balARS,calcUSD:S.balance.balUSD,mesNuevo,saldosReales});
     document.getElementById('cierre-ov').classList.remove('show');
-    hideLoading();
-    await syncNow();
-    showSuc('🗓','¡Mes cerrado!','Ajuste registrado.\nNuevo mes iniciado.');
+    hideLoading();await syncNow();
+    showSuc('🗓','¡Mes cerrado!','Ajuste registrado.
+Nuevo mes iniciado.');
   }catch(e){hideLoading();}
 }
 
