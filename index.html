@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzy3MbiVgegHSNYOgiZqTLL-1bdNRjxrFNtgM6bPY8G_LDVOAZXS8ukPQV9vMbv_GwA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -1019,45 +1019,60 @@ function renderCatsEditor(tipo){
     </div>`+emojiPicker;
 }
 function toggleEmojiPicker(tipo){
-  // Use native emoji keyboard via hidden input
-  let inp=document.getElementById('emoji-inp-'+tipo);
-  if(!inp){
-    inp=document.createElement('input');
-    inp.id='emoji-inp-'+tipo;
-    inp.type='text';
-    // iOS shows emoji keyboard when inputmode is none and user taps
-    // Better: use a regular text input positioned off-screen
-    inp.style.cssText='position:fixed;top:50%;left:50%;width:1px;height:1px;opacity:0;border:none;outline:none;background:transparent;font-size:30px;';
-    inp.setAttribute('inputmode','none');
-    inp.setAttribute('enterkeyhint','done');
-    document.body.appendChild(inp);
-    inp.addEventListener('input',e=>{
-      const val=e.target.value;
-      // extract first emoji character
-      const match=val.match(/\p{Emoji}/u);
-      if(match){
-        const emoji=match[0];
-        if(_changingEmoji&&_changingEmoji.tipo===tipo){
-          const cat=S.categorias.find(c=>c.tipo===tipo&&c.nombre===_changingEmoji.nombre);
-          if(cat){cat.emoji=emoji;saveCats();}
-          _changingEmoji=null;
-        } else {
-          selEmoji[tipo]=emoji;
-          const el=document.getElementById('new-ico-'+tipo);
-          if(el)el.textContent=emoji;
-        }
-        inp.value='';
-        renderCatsEditor(tipo);
-      }
-    });
+  // Show emoji overlay input
+  showEmojiInput(tipo,null);
+}
+function showEmojiInput(tipo,nombre){
+  if(nombre)_changingEmoji={tipo,nombre};
+  else _changingEmoji=null;
+  // Create or reuse overlay
+  let ov=document.getElementById('emoji-ov');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='emoji-ov';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:800;display:flex;align-items:flex-end;';
+    ov.innerHTML=`<div style="background:#1a1a1a;border-radius:20px 20px 0 0;width:100%;padding:20px;border-top:.5px solid rgba(255,255,255,.14);">
+      <div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.12);margin:0 auto 16px;"></div>
+      <div style="font-size:13px;color:rgba(240,237,232,.45);text-align:center;margin-bottom:12px;">Escribí o pegá un emoji</div>
+      <input id="emoji-text-inp" type="text"
+        style="width:100%;background:#242424;border:.5px solid rgba(255,255,255,.14);border-radius:12px;padding:14px;font-size:32px;text-align:center;color:#f0ede8;outline:none;font-family:-apple-system,sans-serif;"
+        placeholder="😀"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button onclick="cancelEmojiInput()" style="flex:1;padding:13px;border-radius:12px;background:transparent;color:rgba(240,237,232,.45);border:none;font-size:15px;cursor:pointer;">Cancelar</button>
+        <button onclick="confirmEmojiInput()" style="flex:1;padding:13px;border-radius:12px;background:#e8d5b0;color:#0f0f0f;border:none;font-size:15px;font-weight:500;cursor:pointer;">Confirmar</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
   }
+  ov.style.display='flex';
+  ov._tipo=tipo;
+  const inp=document.getElementById('emoji-text-inp');
   inp.value='';
-  // Position near the tapped element so iOS keyboard appears nearby
-  inp.style.opacity='0.01';
-  inp.style.top='50%';
-  inp.focus();
-  // Trigger emoji keyboard on iOS by using a tap simulation
-  setTimeout(()=>{inp.style.opacity='0';},300);
+  setTimeout(()=>inp.focus(),100);
+}
+function confirmEmojiInput(){
+  const ov=document.getElementById('emoji-ov');
+  const tipo=ov._tipo;
+  const val=document.getElementById('emoji-text-inp').value.trim();
+  if(!val){cancelEmojiInput();return;}
+  // Take first character (emoji or text)
+  const emoji=[...val][0]||val;
+  if(_changingEmoji&&_changingEmoji.tipo===tipo){
+    const cat=S.categorias.find(c=>c.tipo===tipo&&c.nombre===_changingEmoji.nombre);
+    if(cat){cat.emoji=emoji;saveCats();}
+    _changingEmoji=null;
+  } else {
+    selEmoji[tipo]=emoji;
+    const el=document.getElementById('new-ico-'+tipo);
+    if(el)el.textContent=emoji;
+  }
+  cancelEmojiInput();
+  renderCatsEditor(tipo);
+}
+function cancelEmojiInput(){
+  const ov=document.getElementById('emoji-ov');
+  if(ov)ov.style.display='none';
 }
 function pickEmoji(tipo,emoji){
   if(selEmojiTipo===tipo&&!_changingEmoji){
@@ -1073,8 +1088,7 @@ function pickEmoji(tipo,emoji){
 }
 let _changingEmoji=null;
 function changeEmoji(tipo,nombre){
-  _changingEmoji={tipo,nombre};
-  toggleEmojiPicker(tipo);
+  showEmojiInput(tipo,nombre);
 }
 function delCat(tipo,nombre){
   S.categorias=S.categorias.filter(c=>!(c.tipo===tipo&&c.nombre===nombre));
