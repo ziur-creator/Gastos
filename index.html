@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx8cgp6BJK2eJleigQ2fDO2oob98mjyFnDivNyUhkrrmEnMa50WgPa47FYPm37LOwV9/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -493,10 +493,13 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Categorías de gastos</div><div class="cfg-card" id="cat-card-gasto"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Categorías de ingresos</div><div class="cfg-card" id="cat-card-ingreso"></div></div>
       <div class="cfg-sec" style="margin-top:14px;"><div class="cfg-lbl">Datos históricos 2025</div>
-        <div class="cfg-note" style="padding:0 0 8px;">Ingresá los totales anuales de 2025 para comparativas.</div>
-        <div id="hist-form-ars" style="margin-bottom:8px;"></div>
-        <div id="hist-form-usd" style="margin-bottom:8px;"></div>
-        <button onclick="saveHistorico()" style="margin:4px 0 0;width:100%;padding:12px;border-radius:12px;background:var(--gobg);border:.5px solid rgba(232,213,176,.3);color:var(--go);font-family:var(--f);font-size:14px;font-weight:500;cursor:pointer;">Guardar histórico 2025</button>
+        <div class="cfg-card">
+          <div class="cfg-row" style="cursor:pointer;" onclick="syncHistorico()">
+            <span class="cfg-key">Sincronizar desde Sheets</span>
+            <span class="cfg-val">↓</span>
+          </div>
+        </div>
+        <div class="cfg-note">Editá la hoja "Historico2025" directamente en Google Sheets con columnas: Tipo, Categoria, Monto, Moneda.</div>
       </div>
       <button class="reset-btn" onclick="doReset()">⚠ Reset total de la app</button>
       <div class="reset-note">Borra todos los datos locales y desvincula Sheets.<br>Los datos en Sheets no se modifican.</div>
@@ -590,6 +593,8 @@ async function syncNow(){
     S.saldosCuentas=cfg.saldosCuentas||[];
     const cot=await api('getCotizacion');S.cotizaciones=cot;S.cotFecha=cot.fecha;
     try{const h=await api('getHistorico');S.historico=h||[];}catch(e){S.historico=[];}
+    // load logos from Sheets (merges with local)
+    try{const lg=await api('getLogos');if(lg&&Object.keys(lg).length){Object.assign(logos,lg);localStorage.setItem('logos',JSON.stringify(logos));}}catch(e){}
     renderHome();renderAdd();renderDolar();renderConfig();
   }catch(e){}
 }
@@ -619,11 +624,28 @@ function triggerLogoUpload(key){
 function handleLogoUpload(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=ev=>{
-    logos[logoTargetKey]=ev.target.result;
-    localStorage.setItem('logos',JSON.stringify(logos));
-    renderHome();renderConfig();
-    toast('Logo actualizado');
+  reader.onload=async ev=>{
+    // resize to max 64px to keep base64 small
+    const img=new Image();
+    img.onload=async()=>{
+      const MAX=64;
+      const canvas=document.createElement('canvas');
+      const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      canvas.width=Math.round(img.width*scale);
+      canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      const data=canvas.toDataURL('image/png');
+      logos[logoTargetKey]=data;
+      localStorage.setItem('logos',JSON.stringify(logos));
+      renderHome();renderConfig();
+      toast('Logo guardado…');
+      // persist to Sheets
+      try{
+        await api('guardarLogos',{logos});
+        toast('Logo guardado en Sheets ✓');
+      }catch(err){toast('Logo guardado localmente');}
+    };
+    img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
   e.target.value='';
@@ -893,39 +915,19 @@ function renderStats(){
 }
 
 // ══ CONFIG ══
-function renderHistoricoForm(){
-  const allCats=[...new Set(S.categorias.map(c=>c.nombre))];
-  const histMap={};(S.historico||[]).forEach(h=>{histMap[h.tipo+'-'+h.categoria+'-'+h.moneda]=h.monto;});
-  const makeSec=(moneda,label)=>{
-    const gCats=S.categorias.filter(c=>c.tipo==='gasto').map(c=>c.nombre);
-    const iCats=S.categorias.filter(c=>c.tipo==='ingreso').map(c=>c.nombre);
-    return`<div style="font-size:11px;color:var(--hi);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">${label}</div>
-    <div class="cfg-card" style="margin-bottom:8px;">
-      <div style="padding:8px 14px;font-size:10px;color:var(--hi);">Gastos</div>
-      ${gCats.map(n=>{const ico=S.categorias.find(c=>c.nombre===n)?.emoji||'📌';const v=histMap['Gasto-'+n+'-'+moneda]||'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 14px;border-top:.5px solid var(--bd);"><span>${ico}</span><span style="flex:1;font-size:13px;color:var(--tx);">${n}</span><input type="text" inputmode="decimal" data-tipo="Gasto" data-cat="${n}" data-mon="${moneda}" value="${v}" placeholder="0" style="width:100px;background:transparent;border:.5px solid var(--bd);border-radius:8px;padding:5px 8px;color:var(--tx);font-family:var(--fm);font-size:13px;text-align:right;outline:none;"/></div>`;}).join('')}
-      <div style="padding:8px 14px;font-size:10px;color:var(--hi);border-top:.5px solid var(--bd);">Ingresos</div>
-      ${iCats.map(n=>{const ico=S.categorias.find(c=>c.nombre===n)?.emoji||'📌';const v=histMap['Ingreso-'+n+'-'+moneda]||'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 14px;border-top:.5px solid var(--bd);"><span>${ico}</span><span style="flex:1;font-size:13px;color:var(--tx);">${n}</span><input type="text" inputmode="decimal" data-tipo="Ingreso" data-cat="${n}" data-mon="${moneda}" value="${v}" placeholder="0" style="width:100px;background:transparent;border:.5px solid var(--bd);border-radius:8px;padding:5px 8px;color:var(--tx);font-family:var(--fm);font-size:13px;text-align:right;outline:none;"/></div>`;}).join('')}
-    </div>`;
-  };
-  document.getElementById('hist-form-ars').innerHTML=makeSec('ARS','Pesos ARS');
-  document.getElementById('hist-form-usd').innerHTML=makeSec('USD','Dólares USD');
-}
-async function saveHistorico(){
-  const inputs=[...document.querySelectorAll('[data-tipo][data-cat][data-mon]')];
-  const items=inputs.filter(i=>parseNum(i.value)>0).map(i=>({tipo:i.dataset.tipo,categoria:i.dataset.cat,monto:parseNum(i.value),moneda:i.dataset.mon}));
+async function syncHistorico(){
   try{
-    await api('guardarHistorico',{items});
-    S.historico=items;
+    const h=await api('getHistorico');
+    S.historico=h||[];
     S.statsData=null;
-    toast('Histórico 2025 guardado');
-  }catch(e){}
+    toast('Histórico 2025 sincronizado ✓ — '+S.historico.length+' filas');
+  }catch(e){toast('Error al sincronizar histórico');}
 }
 function renderConfig(){
   document.getElementById('cfg-init-ars').value=S.initARS||'';
   document.getElementById('cfg-init-usd').value=S.initUSD||'';
   renderCuentasEditor('ARS');renderCuentasEditor('USD');
   renderCatDragEditor('gasto');renderCatDragEditor('ingreso');
-  renderHistoricoForm();
 }
 async function saveConfig(){
   const a=parseNum(document.getElementById('cfg-init-ars').value),u=parseNum(document.getElementById('cfg-init-usd').value);
@@ -934,12 +936,23 @@ async function saveConfig(){
 }
 
 // Cuentas editor con logos PNG
+let dragCtaIdx=null,dragCtaMoneda=null,touchCtaEl=null;
+
 function renderCuentasEditor(moneda){
-  const id='cfg-ctas-'+moneda.toLowerCase(),ctas=S.cuentas.filter(c=>c.moneda===moneda);
+  const id='cfg-ctas-'+moneda.toLowerCase();
+  const ctas=S.cuentas.filter(c=>c.moneda===moneda);
   const rows=ctas.map((c,i)=>{
     const k=logoKey(moneda,c.nombre);
     const logoContent=logos[k]?`<img src="${logos[k]}">`:`<span class="cta-logo-placeholder">${c.nombre.slice(0,2)}</span>`;
-    return`<div class="cta-edit-row">
+    return`<div class="cta-edit-row" draggable="true"
+        ondragstart="ctaDragStart(event,${i},'${moneda}')"
+        ondragover="ctaDragOver(event)"
+        ondrop="ctaDrop(event,${i},'${moneda}')"
+        ondragend="ctaDragEnd()"
+        ontouchstart="ctaTouchStart(event,${i},'${moneda}')"
+        ontouchmove="ctaTouchMove(event)"
+        ontouchend="ctaTouchEnd(event,${i},'${moneda}')">
+      <span class="drag-handle" style="color:var(--hi);font-size:16px;cursor:grab;flex-shrink:0;">⠿</span>
       <div class="cta-logo-btn" onclick="triggerLogoUpload('${k}')">
         ${logoContent}
         <div class="upload-badge">+</div>
@@ -955,6 +968,54 @@ function renderCuentasEditor(moneda){
       <button class="cta-add-btn" onclick="addCta('${moneda}')">+</button>
     </div>`;
 }
+
+// mouse drag
+function ctaDragStart(e,idx,moneda){dragCtaIdx=idx;dragCtaMoneda=moneda;setTimeout(()=>e.target.closest('.cta-edit-row')?.classList.add('dragging'),0);}
+function ctaDragOver(e){e.preventDefault();document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('drag-over'));e.currentTarget.classList.add('drag-over');}
+function ctaDragEnd(){document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('dragging','drag-over'));}
+function ctaDrop(e,toIdx,moneda){
+  e.preventDefault();ctaDragEnd();
+  if(dragCtaIdx===null||dragCtaMoneda!==moneda||dragCtaIdx===toIdx)return;
+  moveCta(moneda,dragCtaIdx,toIdx);dragCtaIdx=null;
+}
+
+// touch drag
+function ctaTouchStart(e,idx,moneda){
+  dragCtaIdx=idx;dragCtaMoneda=moneda;
+  touchCtaEl=e.currentTarget;touchCtaEl.classList.add('dragging');
+  e.preventDefault();
+}
+function ctaTouchMove(e){
+  if(dragCtaIdx===null)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const row=el?.closest('.cta-edit-row');
+  document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('drag-over'));
+  if(row&&row!==touchCtaEl)row.classList.add('drag-over');
+}
+function ctaTouchEnd(e,_idx,moneda){
+  if(dragCtaIdx===null)return;
+  const t=e.changedTouches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const row=el?.closest('.cta-edit-row');
+  ctaDragEnd();
+  if(row&&row!==touchCtaEl){
+    const list=touchCtaEl.parentElement;
+    const rows=[...list.querySelectorAll('.cta-edit-row')];
+    const toIdx=rows.indexOf(row);
+    if(toIdx>=0&&toIdx!==dragCtaIdx)moveCta(moneda,dragCtaIdx,toIdx);
+  }
+  dragCtaIdx=null;touchCtaEl=null;
+}
+
+function moveCta(moneda,fromIdx,toIdx){
+  const ctas=S.cuentas.filter(c=>c.moneda===moneda);
+  const [moved]=ctas.splice(fromIdx,1);ctas.splice(toIdx,0,moved);
+  S.cuentas=S.cuentas.filter(c=>c.moneda!==moneda).concat(ctas);
+  saveCuentas();renderCuentasEditor(moneda);renderHome();
+}
+
 function renameCta(moneda,idx,newName){
   const ctas=S.cuentas.filter(c=>c.moneda===moneda);if(ctas[idx])ctas[idx].nombre=newName;saveCuentas();}
 function delCta(moneda,idx){
