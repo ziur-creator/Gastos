@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeK5a00bnNjxQDCOhWUBczfensUCXq8lMavpylV1KARWHiX0pqs4OO_mfM0AoacsZ-/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -314,7 +314,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .suc-title{font-size:20px;font-weight:500;}
 .suc-sub{font-size:13px;color:var(--mu);text-align:center;line-height:1.6;padding:0 32px;}
 /* hidden file input */
-.file-inp{position:absolute;width:0;height:0;opacity:0;pointer-events:none;}
+.file-inp{position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;}
 </style>
 </head>
 <body>
@@ -619,7 +619,12 @@ function getLogoHTML(moneda,nombre,size=20){
 }
 function triggerLogoUpload(key){
   logoTargetKey=key;
-  document.getElementById('logo-file-inp').click();
+  const inp=document.getElementById('logo-file-inp');
+  // iOS Safari requires the input to not be display:none
+  inp.style.position='fixed';inp.style.top='50%';inp.style.left='50%';
+  inp.style.opacity='0';inp.style.width='1px';inp.style.height='1px';
+  inp.click();
+  setTimeout(()=>{inp.style.position='absolute';inp.style.top='-9999px';inp.style.left='-9999px';},500);
 }
 function handleLogoUpload(e){
   const file=e.target.files[0];if(!file)return;
@@ -681,8 +686,8 @@ function showCierre(){
   document.getElementById('c-sec-ars').textContent='Pesos ARS — calculado: '+fA(S.balance.balARS);
   document.getElementById('c-sec-usd').textContent='Dólares USD — calculado: '+fU(S.balance.balUSD);
   const ctaA=S.cuentas.filter(c=>c.moneda==='ARS'),ctaU=S.cuentas.filter(c=>c.moneda==='USD');
-  document.getElementById('c-ctas-ars').innerHTML=ctaA.map((c,i)=>`<div class="cuenta-row" onclick="npOpenC(${i},'ARS')"><div class="cta-row-logo">${getLogoHTML('ARS',c.nombre,28)}</div><span class="cta-name">${c.nombre}</span><span class="cta-val" id="cv-ARS-${i}">—</span><span class="cta-edit" id="ce-ARS-${i}">editar</span></div>`).join('');
-  document.getElementById('c-ctas-usd').innerHTML=ctaU.map((c,i)=>`<div class="cuenta-row" onclick="npOpenC(${i},'USD')"><div class="cta-row-logo">${getLogoHTML('USD',c.nombre,28)}</div><span class="cta-name">${c.nombre}</span><span class="cta-val" id="cv-USD-${i}">—</span><span class="cta-edit" id="ce-USD-${i}">editar</span></div>`).join('');
+  document.getElementById('c-ctas-ars').innerHTML=ctaA.map((c,i)=>`<div class="cuenta-row" onclick="npOpenC(${i},'ARS')" ontouchend="this.onclick()" style="cursor:pointer;"><div class="cta-row-logo">${getLogoHTML('ARS',c.nombre,28)}</div><span class="cta-name">${c.nombre}</span><span class="cta-val" id="cv-ARS-${i}">—</span><span class="cta-edit" id="ce-ARS-${i}">editar</span></div>`).join('');
+  document.getElementById('c-ctas-usd').innerHTML=ctaU.map((c,i)=>`<div class="cuenta-row" onclick="npOpenC(${i},'USD')" ontouchend="this.onclick()" style="cursor:pointer;"><div class="cta-row-logo">${getLogoHTML('USD',c.nombre,28)}</div><span class="cta-name">${c.nombre}</span><span class="cta-val" id="cv-USD-${i}">—</span><span class="cta-edit" id="ce-USD-${i}">editar</span></div>`).join('');
   document.getElementById('c-diff').className='c-diff';document.getElementById('btn-cerrar').disabled=true;
   document.getElementById('cierre-ov').classList.add('show');
 }
@@ -980,33 +985,39 @@ function ctaDrop(e,toIdx,moneda){
 }
 
 // touch drag
+let ctaTouchMoved=false;
 function ctaTouchStart(e,idx,moneda){
-  dragCtaIdx=idx;dragCtaMoneda=moneda;
-  touchCtaEl=e.currentTarget;touchCtaEl.classList.add('dragging');
-  e.preventDefault();
+  // Don't capture touch if user tapped a button, input or logo
+  const tag=e.target.tagName;
+  if(tag==='BUTTON'||tag==='INPUT'||e.target.closest('.cta-logo-btn')||e.target.closest('.cta-del-btn'))return;
+  dragCtaIdx=idx;dragCtaMoneda=moneda;ctaTouchMoved=false;
+  touchCtaEl=e.currentTarget;
 }
 function ctaTouchMove(e){
   if(dragCtaIdx===null)return;
+  ctaTouchMoved=true;
   e.preventDefault();
   const t=e.touches[0];
   const el=document.elementFromPoint(t.clientX,t.clientY);
   const row=el?.closest('.cta-edit-row');
   document.querySelectorAll('.cta-edit-row').forEach(r=>r.classList.remove('drag-over'));
-  if(row&&row!==touchCtaEl)row.classList.add('drag-over');
+  if(row&&row!==touchCtaEl){row.classList.add('drag-over');touchCtaEl.classList.add('dragging');}
 }
 function ctaTouchEnd(e,_idx,moneda){
   if(dragCtaIdx===null)return;
-  const t=e.changedTouches[0];
-  const el=document.elementFromPoint(t.clientX,t.clientY);
-  const row=el?.closest('.cta-edit-row');
   ctaDragEnd();
-  if(row&&row!==touchCtaEl){
-    const list=touchCtaEl.parentElement;
-    const rows=[...list.querySelectorAll('.cta-edit-row')];
-    const toIdx=rows.indexOf(row);
-    if(toIdx>=0&&toIdx!==dragCtaIdx)moveCta(moneda,dragCtaIdx,toIdx);
+  if(ctaTouchMoved){
+    const t=e.changedTouches[0];
+    const el=document.elementFromPoint(t.clientX,t.clientY);
+    const row=el?.closest('.cta-edit-row');
+    if(row&&row!==touchCtaEl){
+      const list=touchCtaEl.parentElement;
+      const rows=[...list.querySelectorAll('.cta-edit-row')];
+      const toIdx=rows.indexOf(row);
+      if(toIdx>=0&&toIdx!==dragCtaIdx)moveCta(moneda,dragCtaIdx,toIdx);
+    }
   }
-  dragCtaIdx=null;touchCtaEl=null;
+  dragCtaIdx=null;touchCtaEl=null;ctaTouchMoved=false;
 }
 
 function moveCta(moneda,fromIdx,toIdx){
@@ -1096,34 +1107,38 @@ function moveCat(tipo,fromIdx,toIdx){
 }
 
 // Touch drag
+let catTouchMoved=false;
 function tcStart(e,idx,tipo){
-  dragCatIdx=idx;dragCatTipo=tipo;
+  const tag=e.target.tagName;
+  if(tag==='BUTTON'||tag==='INPUT')return;
+  dragCatIdx=idx;dragCatTipo=tipo;catTouchMoved=false;
   touchDragEl=e.currentTarget;
-  touchDragEl.classList.add('dragging');
-  e.preventDefault();
 }
 function tcMove(e){
   if(dragCatIdx===null)return;
+  catTouchMoved=true;
   e.preventDefault();
   const touch=e.touches[0];
   const el=document.elementFromPoint(touch.clientX,touch.clientY);
   const row=el?.closest('.cat-drag-row');
   document.querySelectorAll('.cat-drag-row').forEach(r=>r.classList.remove('drag-over'));
-  if(row&&row!==touchDragEl)row.classList.add('drag-over');
+  if(row&&row!==touchDragEl){row.classList.add('drag-over');touchDragEl.classList.add('dragging');}
 }
 function tcEnd(e){
   if(dragCatIdx===null)return;
-  const touch=e.changedTouches[0];
-  const el=document.elementFromPoint(touch.clientX,touch.clientY);
-  const row=el?.closest('.cat-drag-row');
   cdEnd();
-  if(row&&row!==touchDragEl){
-    const list=touchDragEl.parentElement;
-    const rows=[...list.querySelectorAll('.cat-drag-row')];
-    const toIdx=rows.indexOf(row);
-    if(toIdx>=0&&toIdx!==dragCatIdx)moveCat(dragCatTipo,dragCatIdx,toIdx);
+  if(catTouchMoved){
+    const touch=e.changedTouches[0];
+    const el=document.elementFromPoint(touch.clientX,touch.clientY);
+    const row=el?.closest('.cat-drag-row');
+    if(row&&row!==touchDragEl){
+      const list=touchDragEl.parentElement;
+      const rows=[...list.querySelectorAll('.cat-drag-row')];
+      const toIdx=rows.indexOf(row);
+      if(toIdx>=0&&toIdx!==dragCatIdx)moveCat(dragCatTipo,dragCatIdx,toIdx);
+    }
   }
-  dragCatIdx=null;touchDragEl=null;
+  dragCatIdx=null;touchDragEl=null;catTouchMoved=false;
 }
 
 async function doReset(){
