@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxiNkkxcAIfrd99JBzGEvd0n132tOThjs2XVzzk3LP7IDEYUMicWJuRm-qlUa8qdNFY/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -20,14 +20,14 @@
   --go:#e8d5b0;--gobg:rgba(232,213,176,.10);
   --bl:rgba(74,144,226,.85);--blbg:rgba(74,144,226,.12);
   --f:'DM Sans',system-ui,sans-serif;--fm:'DM Mono',monospace;
-  --st:env(safe-area-inset-top,44px);--sb:env(safe-area-inset-bottom,34px);
+  --st:env(safe-area-inset-top,47px);--sb:env(safe-area-inset-bottom,34px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overscroll-behavior:none;}
 body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .screen{display:none;flex-direction:column;height:100dvh;}
 .screen.active{display:flex;}
-.sb{height:calc(var(--st)+8px);flex-shrink:0;}
+.sb{height:calc(var(--st)+12px);flex-shrink:0;}
 .topbar{padding:0 20px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 .tt{font-size:17px;font-weight:500;letter-spacing:-.02em;}
 .ta{font-size:14px;color:var(--go);font-weight:500;background:none;border:none;font-family:var(--f);cursor:pointer;padding:4px 0;}
@@ -36,16 +36,16 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .sdot.err{background:var(--rd);}
 .sdot.spin{background:var(--go);animation:pulse 1s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--sb)+80px);}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--sb)+90px);}
 .scroll::-webkit-scrollbar{display:none;}
-.bnav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--sb)+60px);padding-bottom:var(--sb);background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;align-items:flex-start;padding-top:10px;z-index:30;}
+.bnav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--sb)+68px);padding-bottom:max(var(--sb),20px);background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;align-items:flex-start;padding-top:12px;z-index:30;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;}
 .nl{font-size:10px;color:var(--hi);font-family:var(--f);}
 .nb.on .nl{color:var(--go);}
 .ni{width:22px;height:22px;color:var(--hi);}
 .nb.on .ni{color:var(--go);}
 /* LOCK */
-#sl{align-items:center;justify-content:center;padding:40px 24px;gap:0;}
+#sl{align-items:center;justify-content:center;padding:calc(var(--st)+20px) 24px 40px;gap:0;}
 .lock-logo{width:72px;height:72px;border-radius:20px;background:var(--gobg);border:.5px solid rgba(232,213,176,.3);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 32px;}
 .lock-title{font-size:28px;font-weight:500;letter-spacing:-.04em;margin-bottom:8px;text-align:center;}
 .lock-sub{font-size:15px;color:var(--mu);text-align:center;line-height:1.5;margin-bottom:48px;padding:0 40px;}
@@ -446,7 +446,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       </div>
     </div>
     <!-- RECIENTES -->
-    <div id="add-panel-recientes" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(--sb)+80px);position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-recientes"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-recientes"></div><span id="ptr-txt-add-recientes">↓ Deslizá para actualizar</span></div>
+    <div id="add-panel-recientes" style="display:none;flex:1;overflow-y:auto;padding-bottom:calc(var(--sb)+90px);position:relative;" ontouchstart="ptrTouchStart(event)" ontouchmove="ptrTouchMove(event)" ontouchend="ptrTouchEnd(event)"><div class="ptr-indicator" id="ptr-add-recientes"><div class="ptr-spinner" style="display:none" id="ptr-spin-add-recientes"></div><span id="ptr-txt-add-recientes">↓ Deslizá para actualizar</span></div>
       <div style="padding:12px 16px 6px;font-size:11px;color:var(--hi);text-transform:uppercase;letter-spacing:.07em;">Últimos 7 días — deslizá para actualizar</div>
       <div id="recientes-list" style="padding:0 16px;"></div>
     </div>
@@ -844,14 +844,26 @@ function clearAdd(){
 // ── RECIENTES ──
 let recientesData=[];
 async function loadRecientes(){
+  const cont=document.getElementById('recientes-list');
+  if(cont)cont.innerHTML='<div class="empty-state" style="color:var(--mu);">Cargando…</div>';
   try{
     const d=await api('getMovimientos',{mes:S.ultimoMes});
-    const cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);
-    recientesData=(d.rows||[]).filter(r=>{
-      const rd=new Date(r.fecha);return rd>=cutoff;
+    const allRows=d.rows||[];
+    const cutoff=new Date();
+    cutoff.setHours(0,0,0,0);
+    cutoff.setDate(cutoff.getDate()-7);
+    recientesData=allRows.filter(r=>{
+      if(!r.fecha)return false;
+      // fecha format: "2026-03-15"
+      const parts=r.fecha.split('-');
+      if(parts.length!==3)return false;
+      const rd=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      return rd>=cutoff;
     });
     renderRecientes();
-  }catch(e){}
+  }catch(e){
+    if(cont)cont.innerHTML='<div class="empty-state">Error al cargar: '+e.message+'</div>';
+  }
 }
 function renderRecientes(){
   const cont=document.getElementById('recientes-list');
