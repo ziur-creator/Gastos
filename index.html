@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzy3MbiVgegHSNYOgiZqTLL-1bdNRjxrFNtgM6bPY8G_LDVOAZXS8ukPQV9vMbv_GwA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 </script>
 <style>
 :root{
@@ -338,6 +338,9 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
           <div class="bc-pills"><span class="bc-pill pill-g" id="h-usd-in">+US$0</span><span class="bc-pill pill-r" id="h-usd-out">−US$0</span></div>
         </div>
       </div>
+      <!-- per-account balances -->
+      <div id="h-cuentas-ars" style="margin:0 16px 4px;background:var(--s1);border-radius:12px;border:.5px solid var(--bd);overflow:hidden;"></div>
+      <div id="h-cuentas-usd" style="margin:0 16px 10px;background:var(--s1);border-radius:12px;border:.5px solid var(--bd);overflow:hidden;"></div>
       <div class="pat">
         <div class="pat-lbl">Patrimonio total</div>
         <div class="pat-row"><div class="pat-val" id="h-pat">US$0</div></div>
@@ -381,7 +384,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
         <div class="fl"><div class="flbl">Monto</div>
           <input class="finput" type="text" id="add-amt" placeholder="0" inputmode="decimal" style="font-size:28px;font-family:var(--fm);font-weight:500;">
         </div>
-        <div class="fl"><div class="flbl">Fecha</div><input class="finput" type="date" id="add-date"></div>
+        <div class="fl"><div class="flbl">Fecha</div><input class="finput" type="date" id="add-date" style="width:100%;text-align:left;"></div>
         <button class="btn-p" id="add-btn" onclick="submitMov()">Registrar gasto</button>
       </div>
     </div>
@@ -627,6 +630,16 @@ async function syncNow(){
     S.balance=cfg.balance||S.balance;
     const movs=await api('getMovimientos',{mes:S.ultimoMes});
     S.movimientos=(movs.rows||[]);
+    // compute per-account balances from movements
+    const saldoMap={};
+    S.movimientos.forEach(m=>{
+      if(!m.cuenta)return;
+      const k=m.moneda+'-'+m.cuenta;
+      if(!saldoMap[k])saldoMap[k]={moneda:m.moneda,cuenta:m.cuenta,saldo:0};
+      if(m.tipo==='Gasto')saldoMap[k].saldo-=parseFloat(m.monto)||0;
+      else saldoMap[k].saldo+=parseFloat(m.monto)||0;
+    });
+    S.saldosCuentas=Object.values(saldoMap);
     const cot=await api('getCotizacion');
     S.cotizaciones=cot;S.cotFecha=cot.fecha;
     renderHome();renderAdd();renderDolar();renderConfig();
@@ -666,6 +679,32 @@ function renderHome(){
     document.getElementById('h-pat-note').textContent=fA(b.balARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(b.balUSD);
   }
   renderMovList();
+  renderHomeCuentas();
+}
+function renderHomeCuentas(){
+  const logos=getLogos();
+  ['ARS','USD'].forEach(mon=>{
+    const ctas=S.cuentas.filter(x=>x.moneda===mon);
+    const saldos=S.saldosCuentas||[];
+    const cont=document.getElementById('h-cuentas-'+mon.toLowerCase());
+    if(!cont)return;
+    if(!ctas.length){cont.style.display='none';return;}
+    cont.style.display='';
+    cont.innerHTML=ctas.map(ct=>{
+      const key=mon+'-'+ct.nombre;
+      const logoHtml=logos[key]
+        ?`<img src="${logos[key]}" style="width:26px;height:26px;object-fit:cover;border-radius:50%;display:block;">`
+        :`<span style="font-size:10px;font-weight:600;color:var(--mu);">${ct.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`;
+      const sc=saldos.find(s=>s.moneda===mon&&s.cuenta===ct.nombre);
+      const saldo=sc!=null?sc.saldo:null;
+      const fmt=mon==='USD'?fU:fA;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:.5px solid var(--bd);">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</div>
+        <span style="flex:1;font-size:13px;color:var(--mu);">${ct.nombre}</span>
+        <span style="font-size:13px;font-family:var(--fm);color:var(--tx);">${saldo!=null?fmt(saldo):'—'}</span>
+      </div>`;
+    }).join('').replace(/border-bottom[^;]+;(?=<\/div>\s*$)/,'');
+  });
 }
 function setFilt(f,el){movFilt=f;document.querySelectorAll('.ftag').forEach(e=>e.classList.remove('on'));el.classList.add('on');renderMovList();}
 function renderMovList(){
@@ -677,7 +716,7 @@ function renderMovList(){
     if(movFilt==='ARS')return m.moneda==='ARS';
     if(movFilt==='USD')return m.moneda==='USD';
     return true;
-  });
+  }).slice(0,10);
   if(!rows.length){list.innerHTML='<div class="empty">Sin movimientos.</div>';return;}
   list.innerHTML=rows.map(m=>{
     const isG=m.tipo==='Gasto';const isCambio=m.tipo==='Compra USD'||m.tipo==='Venta USD';
