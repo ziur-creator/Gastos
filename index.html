@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="theme-color" content="#0f0f0f">
 <title>Gastos</title>
-<script>const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyA7OuJSq2niJ5nXl-Ae8S9k6cjJZ8DoH3il1kjBeFExc4oy3IU-f8GnMMJ-Qh1l4I/exec';</script>
+<script>const SCRIPT_URL='https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -899,12 +899,37 @@ function renderRecientes(){
 }
 function mkKey(r){return r.fecha+'_'+r.categoria+'_'+String(parseFloat(r.monto)||0);}
 
-async function deleteMovimiento(idx){
+let pendingDeleteIdx=null;
+
+function deleteMovimiento(idx){
+  // confirm() is blocked in iOS PWA - use custom modal
+  pendingDeleteIdx=idx;
   const r=recientesData[idx];
   if(!r)return;
-  if(!confirm('¿Borrar este movimiento de Sheets?'))return;
+  const isG=r.tipo==='Gasto'||r.tipo==='gasto';
+  const monto=(r.moneda==='USD'?fU:fA)(r.monto);
+  document.getElementById('del-modal-desc').textContent=(isG?'Gasto':'Ingreso')+' · '+r.categoria+' · '+monto+' · '+r.fecha;
+  document.getElementById('del-modal').classList.add('show');
+}
+
+async function confirmDelete(){
+  document.getElementById('del-modal').classList.remove('show');
+  const idx=pendingDeleteIdx;
+  if(idx===null)return;
+  pendingDeleteIdx=null;
+  const r=recientesData[idx];
+  if(!r)return;
   try{
-    await api('deleteMovimiento',{mes:S.ultimoMes,fecha:r.fecha,tipo:r.tipo,categoria:r.categoria,monto:r.monto,moneda:r.moneda,cuenta:r.cuenta||''});
+    const result=await api('deleteMovimiento',{
+      mes:normalizeMes(S.ultimoMes),
+      fecha:r.fecha,
+      tipo:r.tipo,
+      categoria:r.categoria,
+      monto:r.monto,
+      moneda:r.moneda,
+      cuenta:r.cuenta||''
+    });
+    if(result&&result.ok===false){toast('No encontrado en Sheets');return;}
     // update local balance
     const isG=r.tipo==='Gasto'||r.tipo==='gasto';
     const isARS=r.moneda==='ARS';
@@ -915,8 +940,13 @@ async function deleteMovimiento(idx){
     recientesData.splice(idx,1);
     renderRecientes();
     renderHome();
-    toast('Movimiento eliminado ✓');
-  }catch(e){toast('Error al eliminar: '+e.message);}
+    toast('Eliminado ✓');
+  }catch(e){toast('Error: '+e.message);}
+}
+
+function cancelDelete(){
+  document.getElementById('del-modal').classList.remove('show');
+  pendingDeleteIdx=null;
 }
 
 function hideMovimiento(key){
@@ -1308,7 +1338,7 @@ function tcEnd(e){
 }
 
 async function doReset(){
-  if(!confirm('¿Resetear toda la app? Se borran los datos locales y se desvincula Sheets. Los datos en Sheets no se modifican.'))return;
+  // confirm() may be blocked in PWA - proceed directly
   try{await api('resetApp');localStorage.clear();showSuc('🔄','App reseteada','Recargá la página para comenzar de nuevo.');setTimeout(()=>location.reload(),2500);}catch(e){}
 }
 
