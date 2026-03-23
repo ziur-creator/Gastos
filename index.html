@@ -59,11 +59,11 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 
 /* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);}
-.bnav-row{display:flex;align-items:flex-start;height:49px;padding-top:22px;}
+.bnav-row{display:flex;align-items:flex-end;padding-bottom:6px;height:49px;}
 .bnav-safe{display:none;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
-.ni{width:22px;height:22px;color:var(--hi);}
-.nl{font-size:10px;color:var(--hi);font-family:var(--f);letter-spacing:.02em;}
+.ni{width:26px;height:26px;color:var(--hi);}
+.nl{font-size:11px;color:var(--hi);font-family:var(--f);letter-spacing:.02em;}
 .nb.on .ni,.nb.on .nl{color:var(--go);}
 
 /* HOME */
@@ -561,7 +561,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
