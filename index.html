@@ -559,7 +559,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -1030,9 +1030,10 @@ function renderStats(){
       const ico=S.categorias.find(x=>x.nombre===cat)?.emoji||'📌';
       const cells=MOS.map(m=>{
         const v=byMes[m]?.[cat]||0;
+        // Show full value (not abbreviated)
         let disp='—';
-        if(v>0)disp=cur==='ARS'?(v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+Math.round(v/1000)+'k':'$'+Math.round(v)):(v>=1000?'U$'+(v/1000).toFixed(1)+'k':'U$'+v.toFixed(0));
-        return`<div class="scat-cell"><div class="scat-mon">${m}</div><div class="scat-v${v===0?' zero':isInc?' pos':''}">${disp}</div></div>`;
+        if(v>0)disp=cur==='ARS'?fA(v):fU(v);
+        return`<div class="scat-cell"><div class="scat-mon">${m}</div><div class="scat-v${v===0?' zero':isInc?' pos':''}" style="font-size:9px;">${disp}</div></div>`;
       }).join('');
       // % vs año anterior
       const vP=prevTots&&prevTots[cat]?prevTots[cat]:0;
@@ -1042,11 +1043,11 @@ function renderStats(){
         const dp=((vC-vP)/vP*100);
         const isUp=dp>0;
         const color=isInc?(isUp?'var(--gn)':'var(--rd)'):(isUp?'var(--rd)':'var(--gn)');
-        pctHtml=`<span style="font-size:10px;font-family:var(--fm);color:${color};margin-left:6px;">${isUp?'+':''}${dp.toFixed(0)}%</span>`;
+        pctHtml=`<span style="font-size:12px;font-family:var(--fm);color:${color};margin-left:8px;">${isUp?'+':''}${dp.toFixed(0)}%</span>`;
       } else if(vC>0){
-        pctHtml=`<span style="font-size:10px;font-family:var(--fm);color:var(--hi);margin-left:6px;">nuevo</span>`;
+        pctHtml=`<span style="font-size:12px;font-family:var(--fm);color:var(--hi);margin-left:8px;">nuevo</span>`;
       }
-      return`<div class="scat-card"><div class="scat-hd"><span class="scat-name">${ico} ${cat}</span><span style="display:flex;align-items:center;"><span class="scat-tot">${fK(vC)}</span>${pctHtml}</span></div><div class="scat-months">${cells}</div></div>`;
+      return`<div class="scat-card"><div class="scat-hd" style="padding:12px 14px 8px;"><span class="scat-name" style="font-size:15px;">${ico} ${cat}</span><span style="display:flex;align-items:center;"><span class="scat-tot" style="font-size:15px;">${fK(vC)}</span>${pctHtml}</span></div><div class="scat-months">${cells}</div></div>`;
     }).join('');
     document.getElementById(id).innerHTML=html||'<div class="empty">Sin datos.</div>';
   };
