@@ -70,19 +70,19 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .bal-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px 8px;}
 .bal-card{background:var(--s1);border-radius:16px;padding:14px;border:.5px solid var(--bd);}
 .bc-flag{font-size:16px;margin-bottom:5px;}
-.bc-lbl{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
-.bc-amt{font-size:19px;font-weight:500;letter-spacing:-.02em;font-family:var(--fm);}
+.bc-lbl{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.bc-amt{font-size:22px;font-weight:500;letter-spacing:-.02em;font-family:var(--fm);}
 .bc-amt.neg{color:var(--rd);}
-.bc-eq{font-size:10px;color:var(--hi);margin-top:3px;font-family:var(--fm);}
+.bc-eq{font-size:12px;color:var(--hi);margin-top:3px;font-family:var(--fm);}
 .bc-pills{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
-.bc-pill{font-size:10px;padding:2px 7px;border-radius:10px;font-family:var(--fm);}
+.bc-pill{font-size:12px;padding:2px 7px;border-radius:10px;font-family:var(--fm);}
 .pill-g{background:var(--gbg);color:var(--gn);}
 .pill-r{background:var(--rbg);color:var(--rd);}
 .pat{margin:0 16px 10px;background:var(--s1);border-radius:14px;padding:14px 16px;border:.5px solid rgba(232,213,176,.18);}
 .pat-lbl{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
 .pat-row{display:flex;justify-content:space-between;align-items:baseline;}
 .pat-val{font-size:22px;font-weight:500;color:var(--go);font-family:var(--fm);letter-spacing:-.02em;}
-.pat-note{font-size:10px;color:var(--hi);margin-top:3px;}
+.pat-note{font-size:13px;color:var(--hi);margin-top:3px;}
 .sec-hd{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;padding:8px 20px 5px;}
 .mov-list{padding:0 16px;}
 .mov-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--bd);}
@@ -559,7 +559,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -702,7 +702,7 @@ function renderHome(){
     }
     const pat=totalUSD+totalARS/cot.compra;
     document.getElementById('h-pat').textContent=fU(pat);
-    document.getElementById('h-pat-note').textContent=fA(totalARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(totalUSD);
+    const patNote=document.getElementById('h-pat-note');patNote.textContent=fA(totalARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(totalUSD);patNote.style.color='var(--gn)';
   }
   renderMovList();
   renderHomeCuentas();
@@ -727,7 +727,7 @@ function renderHomeCuentas(){
       const isLast=idx===ctas.length-1;
       return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;${isLast?'':'border-bottom:.5px solid var(--bd);'}">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</div>
-        <span style="font-size:11px;font-family:var(--fm);color:var(--tx);text-align:right;">${saldo!=null?fmt(saldo):'—'}</span>
+        <span style="font-size:13px;font-family:var(--fm);color:var(--tx);text-align:right;">${saldo!=null?fmt(saldo):'—'}</span>
       </div>`;
     }).join('');
   });
