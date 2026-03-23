@@ -47,7 +47,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .sdot.sp{background:var(--go);animation:pulse 1s infinite;}
 .sdot.er{background:var(--rd);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--sb) + 80px);}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 64px);}
 .scroll::-webkit-scrollbar{display:none;}
 .ptr{height:44px;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:12px;color:var(--mu);flex-shrink:0;transition:height .2s;}
 .ptr.hidden{height:0;}
@@ -58,7 +58,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 .view.on{display:flex;}
 
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(15,15,15,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);height:49px;}
 .bnav-row{display:flex;align-items:center;height:49px;}
 .bnav-safe{display:none;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;height:100%;}
@@ -407,6 +407,12 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
         <div class="bmc"><div class="bmc-lbl" id="bmc-src-lbl">Origen</div><div class="bmc-val src" id="bmc-src-val">—</div></div>
         <div class="bmc"><div class="bmc-lbl" id="bmc-dst-lbl">Destino</div><div class="bmc-val" id="bmc-dst-val">—</div></div>
       </div>
+      <div style="padding:0 16px 6px;">
+        <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;" id="conv-src-lbl">Cuenta origen</div>
+        <div class="cta-grid" id="conv-ctas-src" style="margin-bottom:12px;"></div>
+        <div style="font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;" id="conv-dst-lbl">Cuenta destino</div>
+        <div class="cta-grid" id="conv-ctas-dst"></div>
+      </div>
       <div class="conv-panel">
         <div class="conv-from">
           <div class="conv-lbl" id="conv-from-lbl">—</div>
@@ -555,7 +561,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -566,7 +572,7 @@ let S={
   movimientos:[],statsData:null
 };
 let addType='gasto',addCur='ARS',selCat=null,selCuenta=null;
-let convDir='buy',selCot='blue',statsCur='ARS',movFilt='todos';
+let convDir='buy',selCot='blue',statsCur='ARS',movFilt='todos',selConvSrc=null,selConvDst=null;
 let recData=[],pendingDelIdx=null;
 let npStr='',npCtx=null,cierreVals={};
 let addTab='nuevo';
@@ -684,9 +690,21 @@ function renderHome(){
   if(cot.compra>0){
     document.getElementById('h-ars-eq').textContent='≈ '+fU(b.balARS/cot.compra)+' (blue)';
     document.getElementById('h-usd-eq').textContent='≈ '+fA(b.balUSD*cot.compra)+' (blue)';
-    const pat=b.balUSD+b.balARS/cot.compra;
+    // Patrimonio: suma de saldos reales por cuenta si existen, sino usa balance calculado
+    let totalARS=0,totalUSD=0;
+    const saldos=S.saldosCuentas||[];
+    if(saldos.length>0){
+      saldos.forEach(s=>{
+        if(s.moneda==='ARS')totalARS+=s.saldo||0;
+        else if(s.moneda==='USD')totalUSD+=s.saldo||0;
+      });
+    } else {
+      totalARS=b.balARS||0;
+      totalUSD=b.balUSD||0;
+    }
+    const pat=totalUSD+totalARS/cot.compra;
     document.getElementById('h-pat').textContent=fU(pat);
-    document.getElementById('h-pat-note').textContent=fA(b.balARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(b.balUSD);
+    document.getElementById('h-pat-note').textContent=fA(totalARS)+' ÷ $'+Math.round(cot.compra).toLocaleString('es-AR')+' + '+fU(totalUSD);
   }
   renderMovList();
   renderHomeCuentas();
@@ -885,8 +903,32 @@ function renderDolar(){
   document.getElementById('conv-to-lbl').textContent=isBuy?'Recibís en dólares USD':'Recibís en pesos ARS';
   document.getElementById('btn-conv').textContent=isBuy?'Confirmar compra':'Confirmar venta';
   document.getElementById('conv-result').className='conv-result '+(isBuy?'res-usd':'res-ars');
+  // Update account labels
+  document.getElementById('conv-src-lbl').textContent=isBuy?'Cuenta origen (ARS)':'Cuenta origen (USD)';
+  document.getElementById('conv-dst-lbl').textContent=isBuy?'Cuenta destino (USD)':'Cuenta destino (ARS)';
+  // Reset selections if direction changed
+  selConvSrc=null;selConvDst=null;
+  renderConvCuentas();
   calcConv();
 }
+function renderConvCuentas(){
+  const isBuy=convDir==='buy';
+  const logos=getLogos();
+  function mkChips(containerId,mon,selVal,onclickFn){
+    const ctas=S.cuentas.filter(x=>x.moneda===mon);
+    document.getElementById(containerId).innerHTML=ctas.map(ct=>{
+      const key=mon+'-'+ct.nombre;
+      const logoHtml=logos[key]
+        ?`<img src="${logos[key]}" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block;">`
+        :`<span style="font-size:11px;font-weight:600;">${ct.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`;
+      return`<div class="chip${selVal===ct.nombre?' sel':''}" onclick="${onclickFn}('${ct.nombre.replace(/'/g,"\\'")}')"><span class="chi" style="width:28px;height:28px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">${logoHtml}</span><span style="font-size:11px;">${ct.nombre}</span></div>`;
+    }).join('');
+  }
+  mkChips('conv-ctas-src', isBuy?'ARS':'USD', selConvSrc, 'selConvSrcFn');
+  mkChips('conv-ctas-dst', isBuy?'USD':'ARS', selConvDst, 'selConvDstFn');
+}
+function selConvSrcFn(n){selConvSrc=n;renderConvCuentas();}
+function selConvDstFn(n){selConvDst=n;renderConvCuentas();}
 function setDir(d){convDir=d;document.getElementById('conv-inp').value='';renderDolar();}
 function toggleDir(){setDir(convDir==='buy'?'sell':'buy');}
 function calcConv(){
@@ -918,6 +960,8 @@ function showConvModal(){
   document.getElementById('cm-to').className='mdv '+(isBuy?'buy':'sell');
   document.getElementById('cm-rate').textContent=selCot.charAt(0).toUpperCase()+selCot.slice(1)+' $'+Math.round(rate).toLocaleString('es-AR');
   document.getElementById('cm-date').textContent=todayISO().split('-').reverse().join('/');
+  document.getElementById('cm-from').textContent+=(selConvSrc?' ('+selConvSrc+')':'');
+  document.getElementById('cm-to').textContent+=(selConvDst?' ('+selConvDst+')':'');
   document.getElementById('cm-btn').className='btn-confirm '+(isBuy?'buy':'sell');
   document.getElementById('cm-btn').textContent=isBuy?'Confirmar compra':'Confirmar venta';
   document.getElementById('conv-modal').classList.add('show');
@@ -931,7 +975,7 @@ async function confirmConv(){
   const result=rate>0?(isBuy?from/rate:from*rate):0;
   closeConvModal();
   try{
-    await api('cambiarDivisas',{fecha:todayISO(),direccion:convDir,cotNombre:selCot,tipoCambio:rate,montoOrigen:from,montoDestino:result});
+    await api('cambiarDivisas',{fecha:todayISO(),direccion:convDir,cotNombre:selCot,tipoCambio:rate,montoOrigen:from,montoDestino:result,cuentaSrc:selConvSrc||'',cuentaDst:selConvDst||''});
     if(isBuy){S.balance.balARS-=from;S.balance.balUSD+=result;}
     else{S.balance.balUSD-=from;S.balance.balARS+=result;}
     document.getElementById('conv-inp').value='';
@@ -1229,28 +1273,34 @@ function closeCierre(){document.getElementById('cierre-ov').classList.remove('sh
 async function confirmCierre(){
   const cuentasARS=S.cuentas.filter(x=>x.moneda==='ARS');
   const cuentasUSD=S.cuentas.filter(x=>x.moneda==='USD');
-  // sum per-account inputs for totals
-  const sumCtas=(mon,ctas)=>ctas.reduce((s,ct)=>{
+  // Collect per-account values from inputs
+  const getCuentasVals=(mon,ctas)=>ctas.map(ct=>{
     const inp=document.getElementById('cierre-'+mon+'-'+ct.nombre.replace(/\s+/g,'_'));
-    return s+(inp&&inp.value?parseNum(inp.value):0);
-  },0);
-  const arsTotal=sumCtas('ARS',cuentasARS);
-  const usdTotal=sumCtas('USD',cuentasUSD);
-  const arsReal=arsTotal||S.balance.balARS;
-  const usdReal=usdTotal||S.balance.balUSD;
-  const saldosReales=[...cuentasARS,...cuentasUSD].map(ct=>{
-    const inp=document.getElementById('cierre-'+ct.moneda+'-'+ct.nombre.replace(/\s+/g,'_'));
     const val=inp&&inp.value?parseNum(inp.value):null;
-    return val!=null?{moneda:ct.moneda,cuenta:ct.nombre,saldo:val}:null;
-  }).filter(Boolean);
+    // fallback to saldo actual de la cuenta
+    const sc=(S.saldosCuentas||[]).find(s=>s.moneda===mon&&s.cuenta===ct.nombre);
+    const fallback=sc!=null?sc.saldo:0;
+    return{nombre:ct.nombre,valor:val!=null?val:fallback};
+  });
+  const arrARS=getCuentasVals('ARS',cuentasARS);
+  const arrUSD=getCuentasVals('USD',cuentasUSD);
+  const totalARS=arrARS.reduce((s,x)=>s+x.valor,0);
+  const totalUSD=arrUSD.reduce((s,x)=>s+x.valor,0);
   const now=new Date();
+  const mesActual=S.ultimoMes;
   const mesNuevo=MO[now.getMonth()]+now.getFullYear();
+  const fechaAjuste=todayISO();
   showLoading('Cerrando mes…');
   try{
-    await api('cerrarMes',{arsReal,usdReal,calcARS:S.balance.balARS,calcUSD:S.balance.balUSD,mesNuevo,saldosReales});
+    await api('cerrarMes',{
+      totalARS,totalUSD,
+      calcARS:S.balance.balARS,calcUSD:S.balance.balUSD,
+      cuentasARS:arrARS,cuentasUSD:arrUSD,
+      mesActual,mesNuevo,fechaAjuste
+    });
     document.getElementById('cierre-ov').classList.remove('show');
     hideLoading();await syncNow();
-    showSuc('🗓','¡Mes cerrado!','Ajuste registrado. Nuevo mes iniciado.');
+    showSuc('🗓','¡Mes cerrado!','Saldos guardados. Nuevo mes iniciado.');
   }catch(e){hideLoading();}
 }
 
