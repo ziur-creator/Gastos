@@ -555,7 +555,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -641,18 +641,9 @@ async function syncNow(){
     const seen=new Set();
     S.cuentas=(cfg.cuentas||[]).filter(x=>{const k=x.moneda+'-'+x.nombre;if(seen.has(k))return false;seen.add(k);return true;});
     S.balance=cfg.balance||S.balance;
+    S.saldosCuentas=cfg.saldosCuentas||[];
     const movs=await api('getMovimientos',{mes:S.ultimoMes});
     S.movimientos=(movs.rows||[]);
-    // compute per-account balances from movements
-    const saldoMap={};
-    S.movimientos.forEach(m=>{
-      if(!m.cuenta)return;
-      const k=m.moneda+'-'+m.cuenta;
-      if(!saldoMap[k])saldoMap[k]={moneda:m.moneda,cuenta:m.cuenta,saldo:0};
-      if(m.tipo==='Gasto')saldoMap[k].saldo-=parseFloat(m.monto)||0;
-      else saldoMap[k].saldo+=parseFloat(m.monto)||0;
-    });
-    S.saldosCuentas=Object.values(saldoMap);
     const cot=await api('getCotizacion');
     S.cotizaciones=cot;S.cotFecha=cot.fecha;
     // merge logos from Sheets into localStorage
