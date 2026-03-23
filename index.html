@@ -561,7 +561,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -927,7 +927,7 @@ function renderConvCuentas(){
   mkChips('conv-ctas-src', isBuy?'ARS':'USD', selConvSrc, 'selConvSrcFn');
   mkChips('conv-ctas-dst', isBuy?'USD':'ARS', selConvDst, 'selConvDstFn');
 }
-function selConvSrcFn(n){selConvSrc=n;renderConvCuentas();}
+function selConvSrcFn(n){selConvSrc=n;renderConvCuentas();calcConv();}
 function selConvDstFn(n){selConvDst=n;renderConvCuentas();}
 function setDir(d){convDir=d;document.getElementById('conv-inp').value='';renderDolar();}
 function toggleDir(){setDir(convDir==='buy'?'sell':'buy');}
@@ -936,7 +936,17 @@ function calcConv(){
   const cot=S.cotizaciones[selCot]||{};
   const rate=isBuy?(cot.compra||0):(cot.venta||0);
   const from=parseFloat(document.getElementById('conv-inp').value)||0;
-  const avail=isBuy?S.balance.balARS:S.balance.balUSD;
+  const srcMon=isBuy?'ARS':'USD';
+  const saldos=S.saldosCuentas||[];
+  // Si hay cuenta origen seleccionada, usar su saldo; sino sumar todas las de esa moneda
+  let avail=0;
+  if(selConvSrc){
+    const sc=saldos.find(s=>s.moneda===srcMon&&s.cuenta===selConvSrc);
+    avail=sc?sc.saldo:0;
+  } else {
+    const total=saldos.filter(s=>s.moneda===srcMon).reduce((sum,s)=>sum+s.saldo,0);
+    avail=total||(isBuy?S.balance.balARS:S.balance.balUSD)||0;
+  }
   const result=rate>0?(isBuy?from/rate:from*rate):0;
   document.getElementById('conv-result').textContent=isBuy?fU(result):fA(result);
   document.getElementById('conv-rate').textContent='Cotización '+selCot.charAt(0).toUpperCase()+selCot.slice(1)+': $'+Math.round(rate).toLocaleString('es-AR');
