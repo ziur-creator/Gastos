@@ -561,7 +561,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -906,8 +906,7 @@ function renderDolar(){
   // Update account labels
   document.getElementById('conv-src-lbl').textContent=isBuy?'Cuenta origen (ARS)':'Cuenta origen (USD)';
   document.getElementById('conv-dst-lbl').textContent=isBuy?'Cuenta destino (USD)':'Cuenta destino (ARS)';
-  // Reset selections if direction changed
-  selConvSrc=null;selConvDst=null;
+  // Only reset if direction changed
   renderConvCuentas();
   calcConv();
 }
@@ -929,8 +928,8 @@ function renderConvCuentas(){
 }
 function selConvSrcFn(n){selConvSrc=n;renderConvCuentas();calcConv();}
 function selConvDstFn(n){selConvDst=n;renderConvCuentas();}
-function setDir(d){convDir=d;document.getElementById('conv-inp').value='';renderDolar();}
-function toggleDir(){setDir(convDir==='buy'?'sell':'buy');}
+function setDir(d){if(convDir===d)return;convDir=d;selConvSrc=null;selConvDst=null;document.getElementById('conv-inp').value='';renderDolar();}
+function toggleDir(){const d=convDir==='buy'?'sell':'buy';selConvSrc=null;selConvDst=null;setDir(d);}
 function calcConv(){
   const isBuy=convDir==='buy';
   const cot=S.cotizaciones[selCot]||{};
