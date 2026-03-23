@@ -559,7 +559,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -1056,22 +1056,12 @@ function renderStats(){
   const iCats=[...new Set(iC.map(r=>r.categoria))];
   const gTots={};gCats.forEach(c=>{gTots[c]=MOS.reduce((s,m)=>s+(gByMes[m][c]||0),0);});
   const iTots={};iCats.forEach(c=>{iTots[c]=MOS.reduce((s,m)=>s+(iByMes[m][c]||0),0);});
-  renderCatCards(gCats,gByMes,gTots,false,'stats-cats-g',gPTots);
-  renderCatCards(iCats,iByMes,iTots,true,'stats-cats-i',iPTots);
-  // compare - use anterior data (gP/iP) for previous year totals
+  // previous year totals for % comparison
   const gPTots={};gP.forEach(r=>{gPTots[r.categoria]=(gPTots[r.categoria]||0)+r.monto;});
   const iPTots={};iP.forEach(r=>{iPTots[r.categoria]=(iPTots[r.categoria]||0)+r.monto;});
-  const allCatsG=[...new Set([...gCats,...Object.keys(gPTots)])];
-  const allCatsI=[...new Set([...iCats,...Object.keys(iPTots)])];
-  const mkCmp=(cats,actuMap,prevMap,isInc)=>cats.sort((a,b)=>(actuMap[a]||0)-(actuMap[b]||0)).reverse().map(cat=>{
-    const vC=actuMap[cat]||0,vP=prevMap[cat]||0;
-    const dp=vP?((vC-vP)/vP*100):null;
-    const isUp=dp!==null&&dp>0;
-    const dcls=dp===null?'delta-neu':isUp?(isInc?'delta-dn':'delta-up'):(isInc?'delta-up':'delta-dn');
-    const dstr=dp===null?(vC?'nuevo':'—'):(dp>0?'+':'')+dp.toFixed(1)+'%';
-    const ico=S.categorias.find(x=>x.nombre===cat)?.emoji||'📌';
-    return`<div class="cmp-row"><span class="cmp-ico">${ico}</span><span class="cmp-name">${cat}</span><span class="cmp-val">${fK(vC)}</span><span class="cmp-pct ${dcls}">${dstr}</span></div>`;
-  }).join('');
+  renderCatCards(gCats,gByMes,gTots,false,'stats-cats-g',gPTots);
+  renderCatCards(iCats,iByMes,iTots,true,'stats-cats-i',iPTots);
+
 
 }
 
