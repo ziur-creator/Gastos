@@ -449,9 +449,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
       <div class="div-line"></div>
       <div class="sec-hd">Ingresos por categoría</div>
       <div id="stats-cats-i"></div>
-      <div class="div-line"></div>
-      <div class="cc-title">Comparativa vs año anterior</div>
-      <div id="stats-compare"></div>
+
     </div>
   </div>
 
@@ -561,7 +559,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);overflow:hidden;}
 <div class="loading-ov" id="loading-ov"><div class="loading-spin"></div><div class="loading-txt" id="loading-txt">Guardando…</div></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzANGVEndY6DI3Y-uTUmIsNWAEzQ_XzdTQQEVAug8qwnG6wJRglYhQ3hsQmMVsSMX6T/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
 // ══ CONFIG ══
 const MO=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -1027,7 +1025,7 @@ function renderStats(){
   dEl('s-ing-d',tiP?((tiC-tiP)/tiP*100):0);
   dEl('s-gas-d',tgP?((tgC-tgP)/tgP*100):0);
   // cat cards
-  const renderCatCards=(cats,byMes,totals,isInc,id)=>{
+  const renderCatCards=(cats,byMes,totals,isInc,id,prevTots)=>{
     const html=cats.sort((a,b)=>totals[b]-totals[a]).map(cat=>{
       const ico=S.categorias.find(x=>x.nombre===cat)?.emoji||'📌';
       const cells=MOS.map(m=>{
@@ -1036,7 +1034,19 @@ function renderStats(){
         if(v>0)disp=cur==='ARS'?(v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+Math.round(v/1000)+'k':'$'+Math.round(v)):(v>=1000?'U$'+(v/1000).toFixed(1)+'k':'U$'+v.toFixed(0));
         return`<div class="scat-cell"><div class="scat-mon">${m}</div><div class="scat-v${v===0?' zero':isInc?' pos':''}">${disp}</div></div>`;
       }).join('');
-      return`<div class="scat-card"><div class="scat-hd"><span class="scat-name">${ico} ${cat}</span><span class="scat-tot">${fK(totals[cat])}</span></div><div class="scat-months">${cells}</div></div>`;
+      // % vs año anterior
+      const vP=prevTots&&prevTots[cat]?prevTots[cat]:0;
+      const vC=totals[cat]||0;
+      let pctHtml='';
+      if(vP>0){
+        const dp=((vC-vP)/vP*100);
+        const isUp=dp>0;
+        const color=isInc?(isUp?'var(--gn)':'var(--rd)'):(isUp?'var(--rd)':'var(--gn)');
+        pctHtml=`<span style="font-size:10px;font-family:var(--fm);color:${color};margin-left:6px;">${isUp?'+':''}${dp.toFixed(0)}%</span>`;
+      } else if(vC>0){
+        pctHtml=`<span style="font-size:10px;font-family:var(--fm);color:var(--hi);margin-left:6px;">nuevo</span>`;
+      }
+      return`<div class="scat-card"><div class="scat-hd"><span class="scat-name">${ico} ${cat}</span><span style="display:flex;align-items:center;"><span class="scat-tot">${fK(vC)}</span>${pctHtml}</span></div><div class="scat-months">${cells}</div></div>`;
     }).join('');
     document.getElementById(id).innerHTML=html||'<div class="empty">Sin datos.</div>';
   };
@@ -1046,8 +1056,8 @@ function renderStats(){
   const iCats=[...new Set(iC.map(r=>r.categoria))];
   const gTots={};gCats.forEach(c=>{gTots[c]=MOS.reduce((s,m)=>s+(gByMes[m][c]||0),0);});
   const iTots={};iCats.forEach(c=>{iTots[c]=MOS.reduce((s,m)=>s+(iByMes[m][c]||0),0);});
-  renderCatCards(gCats,gByMes,gTots,false,'stats-cats-g');
-  renderCatCards(iCats,iByMes,iTots,true,'stats-cats-i');
+  renderCatCards(gCats,gByMes,gTots,false,'stats-cats-g',gPTots);
+  renderCatCards(iCats,iByMes,iTots,true,'stats-cats-i',iPTots);
   // compare - use anterior data (gP/iP) for previous year totals
   const gPTots={};gP.forEach(r=>{gPTots[r.categoria]=(gPTots[r.categoria]||0)+r.monto;});
   const iPTots={};iP.forEach(r=>{iPTots[r.categoria]=(iPTots[r.categoria]||0)+r.monto;});
@@ -1062,9 +1072,7 @@ function renderStats(){
     const ico=S.categorias.find(x=>x.nombre===cat)?.emoji||'📌';
     return`<div class="cmp-row"><span class="cmp-ico">${ico}</span><span class="cmp-name">${cat}</span><span class="cmp-val">${fK(vC)}</span><span class="cmp-pct ${dcls}">${dstr}</span></div>`;
   }).join('');
-  document.getElementById('stats-compare').innerHTML=
-    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Gastos '+data.anio+' vs '+data.anioAnterior+'</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsG,gTots,gPTots,false)+'</div>'+
-    '<div style="padding:0 16px 2px;font-size:11px;color:var(--mu);">Ingresos '+data.anio+' vs '+data.anioAnterior+'</div><div class="cfg-card" style="margin:0 16px 10px;">'+mkCmp(allCatsI,iTots,iPTots,true)+'</div>';
+
 }
 
 // ══ CONFIG ══
